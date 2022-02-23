@@ -1,7 +1,7 @@
 ## Setup Nested Kubernetes Cluster using Kuevirt
 
 KubeVirt, a tool that can be used to create and manage Virtual Machines (VM) within a Kubernetes cluster. 
-Using KubeVirt to create a Kubernetes Cluster within a Kubernetes Cluster (Nested Kubernetes Cluster)
+Using KubeVirt to create a Kubernetes Cluster within a Kubernetes Cluster (Nested Kubernetes)
 
 ### Install K8S Cluster
 
@@ -188,3 +188,5 @@ EOF
 systemctl enable rke2-server.service
 systemctl start rke2-server.service
 ```
+
+# [Ref](https://livewyer.io/blog/2021/02/23/kubevirt-showcase-a-kubernetes-cluster-within-a-kubernetes-cluster/)
