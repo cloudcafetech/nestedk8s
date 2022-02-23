@@ -204,4 +204,13 @@ EOF
 
 systemctl enable rke2-server.service
 systemctl start rke2-server.service
+systemctl status rke2-server.service
+
+mkdir ~/.kube
+ln -s /etc/rancher/rke2/rke2.yaml ~/.kube/config
+chmod 600 /root/.kube/config
+ln -s /var/lib/rancher/rke2/agent/etc/crictl.yaml /etc/crictl.yaml
+export PATH=/var/lib/rancher/rke2/bin:$PATH
+echo "export PATH=/var/lib/rancher/rke2/bin:$PATH" >> $HOME/.bash_profile
+echo "alias oc=/var/lib/rancher/rke2/bin/kubectl" >> $HOME/.bash_profile
 ```
