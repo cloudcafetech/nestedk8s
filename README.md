@@ -6,6 +6,7 @@ Using KubeVirt to create a Kubernetes Cluster within a Kubernetes Cluster (Neste
 ### Install K8S Cluster
 
 ```
+kubectl  wait --for=condition=Ready node --all --timeout 60s
 alias oc=kubectl
 oc get no
 kubectl taint node controlplane node-role.kubernetes.io/master:NoSchedule-
