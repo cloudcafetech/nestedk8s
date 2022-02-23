@@ -21,7 +21,7 @@ kubectl annotate storageclass kubevirt-hostpath-provisioner storageclass.kuberne
 kubectl get sc
 ```
 
-### Install Kubevirt Operator and CRD
+### Install Kubevirt Operator and CRD (Working Version KUBEVIRT_VERSION=v0.50.0)
 
 ```
 export KUBEVIRT_VERSION=$(curl -s https://api.github.com/repos/kubevirt/kubevirt/releases/latest | jq -r .tag_name)
