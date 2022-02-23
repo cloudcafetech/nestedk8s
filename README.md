@@ -1,7 +1,7 @@
 ## Setup Nested Kubernetes Cluster using Kuevirt
 
 KubeVirt, a tool that can be used to create and manage Virtual Machines (VM) within a Kubernetes cluster. 
-Using KubeVirt to create a Kubernetes Cluster within a Kubernetes Cluster (Nested Kubernetes)
+Using KubeVirt to create a Kubernetes Cluster within a Kubernetes Cluster (Nested Kubernetes Cluster)
 
 ### Install K8S Cluster
 
@@ -85,6 +85,7 @@ spec:
 EOF
 
 kubectl create -f vm-pvc.yaml
+kubectl wait po `kubectl get po | grep importer | awk '{print $1}'` --for=condition=Ready --timeout=2m 
 kubectl logs -f `kubectl get po | grep importer | awk '{print $1}'`
 ```
 
@@ -149,20 +150,35 @@ EOF
 ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1
 
 PUBKEY=`cat ~/.ssh/id_rsa.pub`
+echo $PUBKEY
 sed -i "s%ssh-rsa.*%$PUBKEY%" vm.yaml
+more vm.yaml
 ```
 
 - Deploy VM
 
-```kubectl create -f vm.yaml```
+```
+kubectl create -f vm.yaml
+sleep 5
+kubectl wait po `kubectl get po | grep virt-launcher | awk '{print $1}'` --for=condition=Ready --timeout=2m 
+```
 
 - Check the Virtual Machine Instance (VMI) has been created
 
-```kubectl get vms,vmi,po```
+```
+kubectl get vms,vmi,po
+kubectl wait vm `kubectl get vm | grep -v NAME | awk '{print $1}'` --for=condition=Ready --timeout=2m
+```
 
-- Connect to the Console of the Ubuntu VMI
+- Connect to the Console of the VM
 
-```virtctl console kubevm```
+```virtctl console `kubectl get vm | grep -v NAME | awk '{print $1}'` ```
+
+- Access VM using SSH
+
+```
+VMIP=`kubectl get vmi | grep -v NAME | awk '{print $4}'`
+ssh root@$VMIP ```
 
 ####  Update CentOS repo (Due to Error: Failed to download metadata for repo 'appstream')
 
@@ -188,5 +204,3 @@ EOF
 systemctl enable rke2-server.service
 systemctl start rke2-server.service
 ```
-
-#### [Ref](https://livewyer.io/blog/2021/02/23/kubevirt-showcase-a-kubernetes-cluster-within-a-kubernetes-cluster/)
