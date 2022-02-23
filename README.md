@@ -202,9 +202,12 @@ curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=v1.20 sh -
 sleep 60
 k3s
 systemctl status k3s
+ln -s /etc/rancher/k3s/k3s.yaml ~/.kube/config
 crictl ps
 crictl images
 kubectl get node
+kubectl get po
+alias oc=kubectl
 ```
 
 #### Setup RKE2
@@ -232,4 +235,5 @@ echo "export PATH=/var/lib/rancher/rke2/bin:$PATH" >> $HOME/.bash_profile
 echo "alias oc=/var/lib/rancher/rke2/bin/kubectl" >> $HOME/.bash_profile
 crictl ps
 crictl images
+alias oc=kubectl
 ```
