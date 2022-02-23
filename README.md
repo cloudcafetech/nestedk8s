@@ -37,6 +37,7 @@ kubectl wait po `kubectl get po -n kubevirt | grep virt-api | awk '{print $1}'` 
 sleep 10
 kubectl wait po `kubectl get po -n kubevirt | grep virt-controller | awk '{print $1}'` --for=condition=Ready --timeout=2m -n kubevirt
 kubectl wait po `kubectl get po -n kubevirt | grep virt-handler | awk '{print $1}'` --for=condition=Ready --timeout=2m -n kubevirt
+kubectl get po -n kubevirt
 ```
 
 ### Install Kubevirt Tool
@@ -61,6 +62,7 @@ kubectl wait po `kubectl get po -n cdi | grep cdi-apiserver | awk '{print $1}'` 
 sleep 10
 kubectl wait po `kubectl get po -n cdi | grep cdi-deployment | awk '{print $1}'` --for=condition=Ready --timeout=2m -n cdi
 kubectl wait po `kubectl get po -n cdi | grep cdi-uploadproxy | awk '{print $1}'` --for=condition=Ready --timeout=2m -n cdi
+kubectl get po -n cdi
 ```
 
 ### Import Cloud Image (Ubuntu 20.04 / CentOS 8) using Data Importer 
