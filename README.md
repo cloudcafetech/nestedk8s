@@ -175,7 +175,9 @@ kubectl wait vm `kubectl get vm | grep -v NAME | awk '{print $1}'` --for=conditi
 
 - Connect to the Console of the VM
 
-```virtctl console `kubectl get vm | grep -v NAME | awk '{print $1}'` ```
+```
+virtctl console `kubectl get vm | grep -v NAME | awk '{print $1}'` 
+```
 
 - Access VM using SSH
 
@@ -191,6 +193,12 @@ cd /etc/yum.repos.d/
 sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
 sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
 yum update -y
+```
+
+#### Setup K3S
+
+```
+curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=v1.20 sh -
 ```
 
 #### Setup RKE2
