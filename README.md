@@ -178,7 +178,8 @@ kubectl wait vm `kubectl get vm | grep -v NAME | awk '{print $1}'` --for=conditi
 
 ```
 VMIP=`kubectl get vmi | grep -v NAME | awk '{print $4}'`
-ssh root@$VMIP ```
+ssh root@$VMIP 
+```
 
 ####  Update CentOS repo (Due to Error: Failed to download metadata for repo 'appstream')
 
