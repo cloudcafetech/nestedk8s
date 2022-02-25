@@ -15,9 +15,10 @@ kubectl taint node controlplane node-role.kubernetes.io/master:NoSchedule-
 ### Install Local Persistent Storage 
 
 ```
-wget https://raw.githubusercontent.com/kubevirt/hostpath-provisioner/main/deploy/kubevirt-hostpath-provisioner.yaml
-kubectl create -f kubevirt-hostpath-provisioner.yaml
-kubectl annotate storageclass kubevirt-hostpath-provisioner storageclass.kubernetes.io/is-default-class=true
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/hostpath-storage.yaml
+kubectl create -f hostpath-storage.yaml
+kubectl annotate sc hostpath-storage storageclass.kubernetes.io/is-default-class=true
+kubectl wait po `kubectl get po -n hostpath-storage | grep hostpath-storage | awk '{print $1}'` --for=condition=Ready --timeout=2m -n hostpath-storage
 kubectl get sc
 ```
 
