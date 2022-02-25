@@ -237,3 +237,11 @@ crictl ps
 crictl images
 alias oc=kubectl
 ```
+
+##### Checking if nested virtualization is supported
+
+For Intel processors, check the /sys/module/kvm_intel/parameters/nested file. For AMD processors, check the /sys/module/kvm_amd/parameters/nested file. If you see 1 or Y, nested virtualization is supported; if you see 0 or N, nested virtualization is not supported. Ref[](https://docs.fedoraproject.org/en-US/quick-docs/using-nested-virtualization-in-kvm/index.html#_checking_if_nested_virtualization_is_supported)
+
+example: ```cat /sys/module/kvm_intel/parameters/nested```
+
+##### [KubevirtRef](https://livewyer.io/blog/2021/02/23/kubevirt-showcase-a-kubernetes-cluster-within-a-kubernetes-cluster/)
