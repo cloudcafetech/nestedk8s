@@ -172,6 +172,24 @@ spec:
       storage: 15Gi
 EOF
 
+cat <<EOF > $N-eth0.yaml
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: $N-eth0
+spec:
+  config: >
+    {
+        "cniVersion": "0.3.1",
+        "name": "$N-eth0",
+        "plugins": [{
+            "type": "bridge",
+            "bridge": "eth0",
+            "ipam": {}
+        }]
+    }
+EOF
+
 cat <<EOF > vm-$N.yaml
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
@@ -199,6 +217,8 @@ spec:
           interfaces:
           - name: default
             bridge: {}
+          - name: eth0
+            bridge: {}
         machine:
           type: q35
         resources:
@@ -208,6 +228,9 @@ spec:
       networks:
       - name: default
         pod: {}
+      - name: eth0
+        multus:
+          networkName: default/$N-eth0
       volumes:
       - name: disk0
         persistentVolumeClaim:
