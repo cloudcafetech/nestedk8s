@@ -183,8 +183,6 @@ spec:
         kubevirt.io/domain: k8s-$N
     spec:
       domain:
-        cpu:
-          cores: 2
         devices:
           disks:
           - disk:
@@ -196,12 +194,13 @@ spec:
             name: cloudinitdisk
           interfaces:
           - name: default
-            masquerade: {}
+            bridge: {}
         machine:
           type: q35
         resources:
           requests:
             memory: 4096M
+            cpu: "2000m"            
       networks:
       - name: default
         pod: {}
