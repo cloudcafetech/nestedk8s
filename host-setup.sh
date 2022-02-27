@@ -89,6 +89,10 @@ kubectl krew install ns ctx virt
 # Setting Network
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 
+# Setting Multus CNI Plugins
+wget -q wget https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset-thick-plugin.yml
+cat multus-daemonset-thick-plugin.yml | kubectl apply -f -
+
 # Setting Storage
 wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/hostpath-storage.yaml
 kubectl create -f hostpath-storage.yaml
