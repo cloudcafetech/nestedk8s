@@ -6,6 +6,7 @@ echo "Add Docker bionic Repository"
 sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
 sudo apt update
 apt-cache policy docker-ce
+virt-host-validate qemu
 echo "Install docker-ce"
 sudo apt -y install docker-ce
 
