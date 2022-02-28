@@ -271,8 +271,6 @@ alias oc=kubectl
 
 - Worker
 
-Take token from master file (/var/lib/rancher/k3s/server/node-token)
-
 ```
 MASTERIP=10.244.1.6
 mkdir -p /etc/rancher/rke2
