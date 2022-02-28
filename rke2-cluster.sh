@@ -44,7 +44,7 @@ node-label:
 EOF
 
 ssh -o StrictHostKeyChecking=no $USER@$NODEIP "mkdir -p /etc/rancher/rke2"
-scp -o StrictHostKeyChecking=no configb.yaml $USER@$NODEIP:/etc/rancher/rke2/config.yaml
+scp -o StrictHostKeyChecking=no confign.yaml $USER@$NODEIP:/etc/rancher/rke2/config.yaml
 ssh -o StrictHostKeyChecking=no $USER@$NODEIP "curl -sfL https://get.rke2.io | INSTALL_RKE2_CHANNEL=v1.20 sh -"
 ssh -o StrictHostKeyChecking=no $USER@$NODEIP "systemctl enable rke2-agent"
 ssh -o StrictHostKeyChecking=no $USER@$NODEIP "systemctl start rke2-agent"
