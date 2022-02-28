@@ -12,7 +12,7 @@ ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "systemctl status k3s"
 ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "mkdir -p /root/.kube"
 ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "ln -s /etc/rancher/k3s/k3s.yaml /root/.kube/config"
 ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "chmod 600 /root/.kube/config"
-ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "echo 'alias oc=/usr/bin/kubectl' >> /root/.bash_profile"
+ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "echo 'alias oc=/usr/local/bin/kubectl' >> /root/.bash_profile"
 ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/kube-ingress.yaml"
 scp -o StrictHostKeyChecking=no employee.yaml $USER@$MASTERIP:/root/employee.yaml
 scp -o StrictHostKeyChecking=no wordpress.yaml $USER@$MASTERIP:/root/wordpress.yaml
