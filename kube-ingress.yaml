@@ -1,4 +1,4 @@
-#wget https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/kube-ingress.yaml
+#wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/kube-ingress.yaml
 #kubectl create ns kube-router
 #kubectl create -f kube-ingress.yaml
 #kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
