@@ -88,7 +88,8 @@ exclude=kubelet kubeadm kubectl
 EOF
 
 # Install some of the tools (including CRI-O, kubeadm & kubelet) we’ll need on our servers.
-yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet dos2unix java-1.7.0-openjdk
+yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet dos2unix java-1.7.0-openjdk qemu-kvm libvirt libvirt-python libguestfs-tools virt-install
+virt-host-validate qemu
 
 # Install Docker
 if ! command -v docker &> /dev/null;
@@ -389,3 +390,6 @@ spec:
     protocol: TCP
     targetPort: 443
 EOF
+
+# Download sample application
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/smaple-app.yaml
