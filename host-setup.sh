@@ -7,6 +7,7 @@ K8S_VER=1.20.15-00
 #curl -s https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep Version | awk '{print $2}' | more
 DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
+PUBIP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
 
 OS=`egrep '^(NAME)=' /etc/os-release | cut -d "=" -f2 | tr -d '"'`
 echo $OS
@@ -198,6 +199,8 @@ chmod +x ./helm-setup.sh
 # Download sample application
 wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/employee.yaml
 wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/wordpress.yaml
+sed -i "s/3.16.154.209/$PUBIP/g" employee.yaml
+sed -i "s/3.16.154.209/$PUBIP/g" wordpress.yaml
 
 # Setup Kubevirt
 export KUBEVIRT_VERSION=$(curl -s https://api.github.com/repos/kubevirt/kubevirt/releases/latest | jq -r .tag_name)
