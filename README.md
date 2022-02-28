@@ -3,6 +3,10 @@
 KubeVirt, a tool that can be used to create and manage Virtual Machines (VM) within a Kubernetes cluster. 
 Using KubeVirt to create a Kubernetes Cluster within a Kubernetes Cluster (Nested Kubernetes Cluster)
 
+<p align="center">
+  <img src="https://github.com/cloudcafetech/nestedk8s/blob/main/nested-kube.PNG">
+</p>
+
 ### Install K8S Cluster or use [Katakoda](https://www.katacoda.com/kubevirt/scenarios/kubevirt-cdi)
 
 - Master
