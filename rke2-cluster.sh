@@ -32,8 +32,8 @@ ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "echo 'export PATH=/var/lib/ranc
 ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "echo 'alias oc=/var/lib/rancher/rke2/bin/kubectl' >> /root/.bash_profile"
 ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "ln -s /var/lib/rancher/rke2/agent/etc/crictl.yaml /etc/crictl.yaml"
 ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/kube-ingress.yaml"
-ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/employee.yaml"
-ssh -o StrictHostKeyChecking=no $USER@$MASTERIP "wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/wordpress.yaml"
+scp -o StrictHostKeyChecking=no employee.yaml $USER@$MASTERIP:/root/employee.yaml
+scp -o StrictHostKeyChecking=no wordpress.yaml $USER@$MASTERIP:/root/wordpress.yaml
 
 # Node Setup
 cat << EOF > confign.yaml
