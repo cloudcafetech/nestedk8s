@@ -78,7 +78,7 @@ metadata:
   name: myemp-ing
 spec:
   rules:
-  - host: employee.3.138.181.244.nip.io
+  - host: employee.3.16.154.209.nip.io
     http:
       paths:
       - backend:
