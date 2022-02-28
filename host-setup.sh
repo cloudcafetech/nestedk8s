@@ -389,3 +389,8 @@ spec:
     protocol: TCP
     targetPort: 443
 EOF
+
+# Cluster create script
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/rke2-cluster.sh
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/k3s-cluster.sh
+chmod +x *-cluster.sh
