@@ -333,3 +333,59 @@ EOF
 sed -i "s%ssh-rsa.*%$PUBKEY%" vm-$N.yaml
 kubectl create -f $N-eth0.yaml 
 done
+
+# Service for VMS
+
+cat <<EOF > vm-svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-$NODE1
+spec:
+  externalTrafficPolicy: Cluster
+  type: NodePort
+  selector:
+    kubevirt.io/domain: k8s-$NODE1
+  ports:
+  - name: ssh
+    nodePort: 30022
+    port: 27017
+    protocol: TCP
+    targetPort: 22
+  - name: http
+    nodePort: 30080
+    port: 27018
+    protocol: TCP
+    targetPort: 80
+  - name: https
+    nodePort: 30043
+    port: 27019
+    protocol: TCP
+    targetPort: 443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-$NODE2
+spec:
+  externalTrafficPolicy: Cluster
+  type: NodePort
+  selector:
+    kubevirt.io/domain: k8s-$NODE2
+  ports:
+  - name: ssh
+    nodePort: 31022
+    port: 28017
+    protocol: TCP
+    targetPort: 22
+  - name: http
+    nodePort: 31080
+    port: 28018
+    protocol: TCP
+    targetPort: 80
+  - name: https
+    nodePort: 31043
+    port: 28019
+    protocol: TCP
+    targetPort: 443
+EOF
