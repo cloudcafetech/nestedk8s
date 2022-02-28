@@ -212,6 +212,8 @@ yum update -y
 
 #### Setup K3S
 
+- Master
+
 ```
 curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=v1.20 sh -
 sleep 60
@@ -225,22 +227,36 @@ kubectl get po
 alias oc=kubectl
 ```
 
-#### Setup RKE2
+- Worker
+
+Take token from master file (/var/lib/rancher/k3s/server/node-token)
 
 ```
-curl -sfL https://get.rke2.io | INSTALL_RKE2_CHANNEL=v1.20 sh -
+TOKEN=
+MASTERIP=10.244.1.6
+curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=v1.20 K3S_URL=https://$MASTERIP:6443 K3S_TOKEN=$TOKEN sh -
+```
 
+#### Setup RKE2
+
+- Master
+
+```
 mkdir -p /etc/rancher/rke2
 cat << EOF >  /etc/rancher/rke2/config.yaml
+token: pkls-secret
 write-kubeconfig-mode: "0644"
+node-label:
+- "region=master"
 tls-san:
-  - "k8s.kubevm.intra"
+  - "k8s-master"
+  - "10.244.1.6"
+# Disable Nginx Ingress
+disable: rke2-ingress-nginx
 EOF
 
-systemctl enable rke2-server.service
-systemctl start rke2-server.service
-systemctl status rke2-server.service
-
+curl -sfL https://get.rke2.io | INSTALL_RKE2_CHANNEL=v1.20 sh -
+systemctl enable rke2-server;systemctl start rke2-server;systemctl status rke2-server
 mkdir ~/.kube
 ln -s /etc/rancher/rke2/rke2.yaml ~/.kube/config
 chmod 600 /root/.kube/config
@@ -251,6 +267,27 @@ echo "alias oc=/var/lib/rancher/rke2/bin/kubectl" >> $HOME/.bash_profile
 crictl ps
 crictl images
 alias oc=kubectl
+```
+
+- Worker
+
+Take token from master file (/var/lib/rancher/k3s/server/node-token)
+
+```
+MASTERIP=10.244.1.6
+mkdir -p /etc/rancher/rke2
+cat << EOF >  /etc/rancher/rke2/config.yaml
+server: https://$MASTERIP:9345
+token: pkls-secret
+node-label:
+- "region=worker"
+EOF
+
+curl -sfL https://get.rke2.io | INSTALL_RKE2_CHANNEL=v1.20 sh - 
+systemctl enable rke2-agent;systemctl start rke2-agent;systemctl status rke2-agent
+ln -s /var/lib/rancher/rke2/agent/etc/crictl.yaml /etc/crictl.yaml
+export PATH=/var/lib/rancher/rke2/bin:$PATH
+echo "export PATH=/var/lib/rancher/rke2/bin:$PATH" >> $HOME/.bash_profile
 ```
 
 ##### Checking if nested virtualization is supported [Ref](https://docs.fedoraproject.org/en-US/quick-docs/using-nested-virtualization-in-kvm/index.html#_checking_if_nested_virtualization_is_supported)
