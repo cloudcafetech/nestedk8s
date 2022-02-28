@@ -8,6 +8,9 @@ K8S_VER=1.20.15-00
 DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
 
+OS=`egrep '^(NAME)=' /etc/os-release | cut -d "=" -f2 | tr -d '"'`
+echo $OS
+
 if [[ ! $master =~ ^( |master|node)$ ]]; then 
  echo "Usage: $0 <master or node>"
  echo "Example: $0 master/node"
@@ -15,6 +18,9 @@ if [[ ! $master =~ ^( |master|node)$ ]]; then
  echo "curl -s https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/host-setup.sh | KUBEMASTER=<MASTER-IP> bash -s node"
  exit
 fi
+
+####### Ubuntu Linux Function ##############
+ubulinux() {
 
 echo "Update apt repo"
 sudo apt update
@@ -51,6 +57,81 @@ else
 fi
 sudo apt-mark hold kubelet kubeadm kubectl
 sudo swapoff -a
+}
+#-------------------------------------------------------#
+
+####### CentOS, RHEL Amazon Linux Function ##############
+cralinux() {
+
+# Stopping and disabling firewalld by running the commands on all servers:
+systemctl stop firewalld
+systemctl disable firewalld
+
+# Disable swap. Kubeadm will check to make sure that swap is disabled when we run it, so lets turn swap off and disable it for future reboots.
+swapoff -a
+sed -i.bak -r 's/(.+ swap .+)/#\1/' /etc/fstab
+
+# Disable SELinux
+setenforce 0
+sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+
+# Add the kubernetes repository to yum so that we can use our package manager to install the latest version of kubernetes. 
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+exclude=kubelet kubeadm kubectl
+EOF
+
+# Install some of the tools (including CRI-O, kubeadm & kubelet) we’ll need on our servers.
+yum install -y git curl wget bind-utils jq httpd-tools zip unzip nfs-utils go nmap telnet dos2unix java-1.7.0-openjdk
+
+# Install Docker
+if ! command -v docker &> /dev/null;
+then
+  echo "MISSING REQUIREMENT: docker engine could not be found on your system. Please install docker engine to continue: https://docs.docker.com/get-docker/"
+  echo "Trying to Install Docker..."
+  if [[ $(uname -a | grep amzn) ]]; then
+    echo "Installing Docker for Amazon Linux"
+    amazon-linux-extras install docker -y
+  else
+    curl -s https://releases.rancher.com/install-docker/19.03.sh | sh
+  fi    
+fi
+systemctl start docker; systemctl status docker; systemctl enable docker
+
+cat <<EOF > /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+
+sysctl --system
+systemctl restart docker
+
+# Installation with specefic version
+#yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER kubernetes-cni-0.6.0 --disableexcludes=kubernetes
+if [[ "$K8S_VER" == "" ]]; then
+ yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+else
+ yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER --disableexcludes=kubernetes
+fi
+
+# After installing crio and our kubernetes tools, we’ll need to enable the services so that they persist across reboots, and start the services so we can use them right away.
+systemctl enable --now kubelet; systemctl start kubelet; systemctl status kubelet
+
+}
+#-------------------------------------------------------#
+
+# Excuting Function based on OS
+if [[ "$OS" == "Ubuntu" ]]; then
+ ubulinux
+else
+ cralinux
+fi
 
 # Setting up Kubernetes Node using Kubeadm
 if [[ "$master" == "node" ]]; then
@@ -250,4 +331,5 @@ spec:
 EOF
 
 sed -i "s%ssh-rsa.*%$PUBKEY%" vm-$N.yaml
+kubectl create -f $N-eth0.yaml 
 done
