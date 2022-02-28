@@ -196,7 +196,8 @@ chmod +x ./helm-setup.sh
 ./helm-setup.sh
 
 # Download sample application
-wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/smaple-app.yaml
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/employee.yaml
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/wordpress.yaml
 
 # Setup Kubevirt
 export KUBEVIRT_VERSION=$(curl -s https://api.github.com/repos/kubevirt/kubevirt/releases/latest | jq -r .tag_name)
