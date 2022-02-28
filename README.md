@@ -1,4 +1,4 @@
-## Setup Nested Kubernetes Cluster using Kuevirt
+## Setup Nested Kubernetes Cluster using Kubevirt
 
 KubeVirt, a tool that can be used to create and manage Virtual Machines (VM) within a Kubernetes cluster. 
 Using KubeVirt to create a Kubernetes Cluster within a Kubernetes Cluster (Nested Kubernetes Cluster)
