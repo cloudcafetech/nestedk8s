@@ -184,7 +184,7 @@ kubectl get sc
 kubectl get po -A
 
 # Setup Ingress
-wget -q https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/kube-ingress.yaml
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/kube-ingress.yaml
 #sed -i "s/kube-master/$MASTER/g" kube-ingress.yaml
 kubectl create ns kube-router
 kubectl create -f kube-ingress.yaml
@@ -194,6 +194,9 @@ kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
 wget -q https://raw.githubusercontent.com/cloudcafetech/kubesetup/master/misc/helm-setup.sh
 chmod +x ./helm-setup.sh
 ./helm-setup.sh
+
+# Download sample application
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/smaple-app.yaml
 
 # Setup Kubevirt
 export KUBEVIRT_VERSION=$(curl -s https://api.github.com/repos/kubevirt/kubevirt/releases/latest | jq -r .tag_name)
@@ -227,19 +230,23 @@ kubectl get po -n cdi
 # VM Preparation
 NODE1=master
 NODE2=worker
+CTX1=k8s
+CTX2=k3s
 
 ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1
 PUBKEY=`cat ~/.ssh/id_rsa.pub`
 echo $PUBKEY
 
+for C in $CTX1 $CTX2
+do
 # PVC & VM yaml generate
 for N in $NODE1 $NODE2
 do
-cat <<EOF > $N-pvc.yaml
+cat <<EOF > $C-$N-pvc.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: "$N-data-volume"
+  name: "$C-$N-data-volume"
   labels:
     app: containerized-data-importer
   annotations:
@@ -254,16 +261,16 @@ spec:
       storage: 15Gi
 EOF
 
-cat <<EOF > $N-eth0.yaml
+cat <<EOF > $C-$N-eth0.yaml
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: $N-eth0
+  name: $C-$N-eth0
 spec:
   config: >
     {
         "cniVersion": "0.3.1",
-        "name": "$N-eth0",
+        "name": "$C-$N-eth0",
         "plugins": [{
             "type": "bridge",
             "bridge": "eth0",
@@ -272,19 +279,19 @@ spec:
     }
 EOF
 
-cat <<EOF > vm-$N.yaml
+cat <<EOF > $C-$N.yaml
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
   labels:
     kubevirt.io/os: linux
-  name: k8s-$N
+  name: $C-$N
 spec:
   running: true
   template:
     metadata:
       labels:
-        kubevirt.io/domain: k8s-$N
+        kubevirt.io/domain: $C-$N
     spec:
       domain:
         devices:
@@ -312,15 +319,15 @@ spec:
         pod: {}
       - name: eth0
         multus:
-          networkName: default/$N-eth0
+          networkName: default/$C-$N-eth0
       volumes:
       - name: disk0
         persistentVolumeClaim:
-          claimName: $N-data-volume
+          claimName: $C-$N-data-volume
       - cloudInitNoCloud:
           userData: |
             #cloud-config
-            hostname: k8s-$N
+            hostname: $C-$N
             user: root
             password: passwd
             chpasswd: { expire: False }
@@ -331,28 +338,24 @@ spec:
         name: cloudinitdisk
 EOF
 
-sed -i "s%ssh-rsa.*%$PUBKEY%" vm-$N.yaml
-kubectl create -f $N-eth0.yaml 
+sed -i "s%ssh-rsa.*%$PUBKEY%" $C-$N.yaml
+kubectl create -f $C-$N-eth0.yaml 
+done
 done
 
 # Service for VMS
 
-cat <<EOF > vm-svc.yaml
+cat <<EOF > $CTX1-svc.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: k8s-$NODE1
+  name: $CTX1-svc
 spec:
   externalTrafficPolicy: Cluster
   type: NodePort
   selector:
-    kubevirt.io/domain: k8s-$NODE1
+    kubevirt.io/domain: $CTX1-$NODE1
   ports:
-  - name: ssh
-    nodePort: 30022
-    port: 27017
-    protocol: TCP
-    targetPort: 22
   - name: http
     nodePort: 30080
     port: 27018
@@ -363,22 +366,18 @@ spec:
     port: 27019
     protocol: TCP
     targetPort: 443
----
+EOF
+cat <<EOF > $CTX2-svc.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: k8s-$NODE2
+  name: $CTX2-svc
 spec:
   externalTrafficPolicy: Cluster
   type: NodePort
   selector:
-    kubevirt.io/domain: k8s-$NODE2
+    kubevirt.io/domain: $CTX2-$NODE2
   ports:
-  - name: ssh
-    nodePort: 31022
-    port: 28017
-    protocol: TCP
-    targetPort: 22
   - name: http
     nodePort: 31080
     port: 28018
@@ -390,6 +389,3 @@ spec:
     protocol: TCP
     targetPort: 443
 EOF
-
-# Download sample application
-wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/smaple-app.yaml
