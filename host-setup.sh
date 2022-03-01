@@ -2,7 +2,8 @@
 # Kubernetes host setup script for Linux (Ubuntu)
 
 master=$1
-K8S_VER=1.20.15-00
+UK8S_VER=1.20.15-00
+K8S_VER=1.20.15
 #K8S_VER=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt | cut -d v -f2)
 #curl -s https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep Version | awk '{print $2}' | more
 DATE=$(date +"%d%m%y")
@@ -54,7 +55,7 @@ sudo apt-get update
 if [[ "$K8S_VER" == "" ]]; then
  sudo apt-get install -qy kubelet kubeadm kubectl
 else
- sudo apt-get install -qy kubelet=$K8S_VER kubectl=$K8S_VER kubeadm=$K8S_VER
+ sudo apt-get install -qy kubelet=$UK8S_VER kubectl=$UK8S_VER kubeadm=$UK8S_VER
 fi
 sudo apt-mark hold kubelet kubeadm kubectl
 sudo swapoff -a
