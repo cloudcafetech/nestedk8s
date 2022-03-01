@@ -139,7 +139,7 @@ fi
 # Setting up Kubernetes Node using Kubeadm
 if [[ "$master" == "node" ]]; then
   echo ""
-  sudo hostnamectl set-hostname node
+  sudo hostnamectl set-hostname $master
   echo "Waiting for Master ($KUBEMASTER) API response .."
   while ! echo break | nc $KUBEMASTER 6443 &> /dev/null; do printf '.'; sleep 2; done
   kubeadm join --discovery-token-unsafe-skip-ca-verification --token=$TOKEN $KUBEMASTER:6443
