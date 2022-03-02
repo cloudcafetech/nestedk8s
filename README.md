@@ -9,10 +9,16 @@ Using KubeVirt to create a Kubernetes Cluster within a Kubernetes Cluster (Neste
 
 ### Install K8S Cluster or use [Katakoda](https://www.katacoda.com/kubevirt/scenarios/kubevirt-cdi)
 
-- Master
+- Master (Bare Metal)
 
 ```
 curl -s https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/host-setup.sh | KUBEMASTER=<MASTER-IP> bash -s master
+```
+
+- Master (VM)
+
+```
+curl -s https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/host-setup.sh | KUBEMASTER=<MASTER-IP> VIRTYPE=VM bash -s master
 ```
 
 - Node
