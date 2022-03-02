@@ -139,7 +139,7 @@ fi
 # Setting up Kubernetes Node using Kubeadm
 if [[ "$master" == "node" ]]; then
   echo ""
-  sudo hostnamectl set-hostname $master
+  sudo hostnamectl set-hostname node
   echo "Waiting for Master ($KUBEMASTER) API response .."
   while ! echo break | nc $KUBEMASTER 6443 &> /dev/null; do printf '.'; sleep 2; done
   kubeadm join --discovery-token-unsafe-skip-ca-verification --token=$TOKEN $KUBEMASTER:6443
@@ -232,6 +232,9 @@ kubectl wait po `kubectl get po -n cdi | grep cdi-deployment | awk '{print $1}'`
 kubectl wait po `kubectl get po -n cdi | grep cdi-uploadproxy | awk '{print $1}'` --for=condition=Ready --timeout=2m -n cdi
 kubectl get po -n cdi
 
+# Deploy VNC viewer 
+kubectl apply -f https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/vncviewer.yaml
+
 # VM Preparation
 NODE1=master
 NODE2=worker
@@ -266,19 +269,19 @@ spec:
       storage: 15Gi
 EOF
 
-cat <<EOF > $C-$N-eth0.yaml
+cat <<EOF > $C-$N-eth2.yaml
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: $C-$N-eth0
+  name: $C-$N-eth2
 spec:
   config: >
     {
         "cniVersion": "0.3.1",
-        "name": "$C-$N-eth0",
+        "name": "$C-$N-eth2",
         "plugins": [{
             "type": "bridge",
-            "bridge": "eth0",
+            "bridge": "eth2",
             "ipam": {}
         }]
     }
@@ -311,7 +314,7 @@ spec:
           interfaces:
           - name: default
             bridge: {}
-          - name: eth0
+          - name: eth2
             bridge: {}
         machine:
           type: q35
@@ -322,9 +325,9 @@ spec:
       networks:
       - name: default
         pod: {}
-      - name: eth0
+      - name: eth2
         multus:
-          networkName: default/$C-$N-eth0
+          networkName: default/$C-$N-eth2
       volumes:
       - name: disk0
         persistentVolumeClaim:
@@ -344,7 +347,7 @@ spec:
 EOF
 
 sed -i "s%ssh-rsa.*%$PUBKEY%" $C-$N.yaml
-kubectl create -f $C-$N-eth0.yaml 
+kubectl create -f $C-$N-eth2.yaml 
 done
 done
 
@@ -393,6 +396,126 @@ spec:
     port: 28019
     protocol: TCP
     targetPort: 443
+EOF
+
+# Windows VM yaml preparation
+
+cat <<EOF > win-vm-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: containerized-data-importer
+  annotations:
+    #cdi.kubevirt.io/storage.import.endpoint: "http://download.microsoft.com/download/6/2/A/62A76ABB-9990-4EFC-A4FE-C7D698DAEB96/9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO"
+    cdi.kubevirt.io/storage.import.endpoint: "https://software-download.microsoft.com/download/pr/17763.737.190906-2324.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us_1.iso"
+    kubevirt.io/provisionOnNode: node
+  name: win2k19
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 7G
+  storageClassName: hostpath-storage
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: winhd
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 15Gi
+  storageClassName: hostpath-storage
+  volumeName: pvc-winhd
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvc-winhd
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 48Gi
+  hostPath:
+    path: /var/hpvolumes/winhd
+    type: ""
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - node
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: hostpath-storage
+  volumeMode: Filesystem
+EOF
+
+cat <<EOF > win-vm.yaml
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: win2k19
+spec:
+  running: false
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: win2k19
+    spec:
+      domain:
+        cpu:
+          cores: 4
+        devices:
+          disks:
+          - bootOrder: 1
+            cdrom:
+              bus: sata
+            name: cdromiso
+          - disk:
+              bus: virtio
+            name: harddrive
+          - cdrom:
+              bus: sata
+            name: virtiocontainerdisk
+        machine:
+          type: q35
+        resources:
+          requests:
+            memory: 8G
+      volumes:
+      - name: cdromiso
+        persistentVolumeClaim:
+          claimName: win2k19
+      - name: harddrive
+        persistentVolumeClaim:
+          claimName: winhd
+      - containerDisk:
+          image: kubevirt/virtio-container-disk
+        name: virtiocontainerdisk
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: windows
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - name: rdp
+    nodePort: 30389
+    port: 27020
+    protocol: TCP
+    targetPort: 3389
+  selector:
+    kubevirt.io/domain: win2k19
+  type: NodePort
 EOF
 
 # Cluster create script
