@@ -208,7 +208,9 @@ export KUBEVIRT_VERSION=$(curl -s https://api.github.com/repos/kubevirt/kubevirt
 echo $KUBEVIRT_VERSION
 kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/kubevirt-operator.yaml
 kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/kubevirt-cr.yaml
-#kubectl -n kubevirt patch kubevirt kubevirt --type=merge --patch '{"spec":{"configuration":{"developerConfiguration":{"useEmulation":true}}}}'
+if [[ $VIRTYPE =~ ^(VM|vm)$ ]]; then 
+ kubectl -n kubevirt patch kubevirt kubevirt --type=merge --patch '{"spec":{"configuration":{"developerConfiguration":{"useEmulation":true}}}}'
+fi
 kubectl get kubevirt -n kubevirt
 kubectl get pods -n kubevirt
 kubectl wait po `kubectl get po -n kubevirt | grep virt-operator | awk '{print $1}'` --for=condition=Ready --timeout=5m -n kubevirt
