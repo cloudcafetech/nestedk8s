@@ -286,7 +286,15 @@ spec:
         "plugins": [{
             "type": "bridge",
             "bridge": "eth2",
-            "ipam": {}
+            "vlan": 1234,
+            "ipam": {
+              "type": "static",
+                "addresses": [
+                  {
+                    "address": "10.244.1.10/24"
+                  }
+                ]
+            }
         }]
     }
 EOF
@@ -337,6 +345,13 @@ spec:
         persistentVolumeClaim:
           claimName: $C-$N-data-volume
       - cloudInitNoCloud:
+          networkData: |
+            version: 2
+            ethernets:
+              enp1s0:
+                dhcp4: true
+              enp2s0:
+                dhcp4: true      
           userData: |
             #cloud-config
             hostname: $C-$N
@@ -351,9 +366,20 @@ spec:
 EOF
 
 sed -i "s%ssh-rsa.*%$PUBKEY%" $C-$N.yaml
-kubectl create -f $C-$N-eth2.yaml 
 done
 done
+
+# Alterin IPS & Deploy
+
+sed -i "s/10.244.1.10/10.244.1.10/g" $CTX1-$NODE1-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.11/g" $CTX1-$NODE2-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.20/g" $CTX2-$NODE1-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.21/g" $CTX2-$NODE2-eth2.yaml
+
+kubectl create -f $CTX1-$NODE1-eth2.yaml
+kubectl create -f $CTX1-$NODE2-eth2.yaml
+kubectl create -f $CTX2-$NODE1-eth2.yaml
+kubectl create -f $CTX2-$NODE2-eth2.yaml
 
 # Service for VMS
 
