@@ -12,13 +12,13 @@ Using KubeVirt to create a Kubernetes Cluster within a Kubernetes Cluster (Neste
 - Master (Bare Metal)
 
 ```
-curl -s https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/host-setup.sh | KUBEMASTER=<MASTER-IP> bash -s master
+curl -s https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/host-setup.sh | bash -s master
 ```
 
 - Master (VM)
 
 ```
-curl -s https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/host-setup.sh | KUBEMASTER=<MASTER-IP> VIRTYPE=VM bash -s master
+curl -s https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/host-setup.sh | VIRTYPE=VM bash -s master
 ```
 
 - Node
