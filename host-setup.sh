@@ -168,20 +168,21 @@ kubectl get po -n cdi
 # Deploy VNC viewer 
 kubectl apply -f https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/vncviewer.yaml
 
+# Generate SSH Key
+ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1
+PUBKEY=`cat ~/.ssh/id_rsa.pub`
+echo $PUBKEY
+
 }
 #-------------------------------------------------------#
 
 ####### VM Preparation Function ##############
-vmprep() {
+k8svmprep() {
 
 NODE1=master
 NODE2=worker
 CTX1=k8s
 CTX2=k3s
-
-ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1
-PUBKEY=`cat ~/.ssh/id_rsa.pub`
-echo $PUBKEY
 
 for C in $CTX1 $CTX2
 do
@@ -492,6 +493,232 @@ chmod +x *-cluster.sh
 }
 #-------------------------------------------------------#
 
+####### OCP VM Preparation Function ##############
+ocpvmprep() {
+
+MAS1=ocpmaster1
+MAS2=ocpmaster2
+MAS3=ocpmaster3
+WOR1=ocpworker1
+WOR2=ocpworker2
+INF1=ocpinfra1
+INF2=ocpinfra2
+BOOT=bootstrap
+JUMP=jumphost
+
+# VM yaml generate
+i=1
+for N in $MAS1 $MAS2 $MAS3 $WOR1 $WOR2 $INF1 $INF2 $BOOT 
+do
+cat <<EOF > $N-eth2.yaml
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: $N-eth2
+spec:
+  config: >
+    {
+        "cniVersion": "0.3.1",
+        "name": "$N-eth2",
+        "plugins": [{
+            "type": "bridge",
+            "bridge": "eth2",
+            "vlan": 1234,
+            "ipam": {
+              "type": "static",
+                "addresses": [
+                  {
+                    "address": "10.244.1.1$i/24"
+                  }
+                ]
+            }
+        }]
+    }
+EOF
+
+cat <<EOF > $N.yaml
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: $N
+  name: rhcos
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: $N
+    spec:
+      domain:
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: containerdisk
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - name: default
+            bridge: {}
+          - name: eth2
+            bridge: {}
+        machine:
+          type: q35
+        resources:
+          requests:
+            memory: 4096M
+            cpu: "2000m"
+      networks:
+      - name: default
+        pod: {}
+      - name: eth2
+        multus:
+          networkName: default/$N-eth2
+      terminationGracePeriodSeconds: 0
+      volumes:
+        - containerDisk:
+            image: quay.io/containerdisks/rhcos:4.9
+          name: containerdisk
+        - cloudInitConfigDrive:
+            userData: |
+              {
+                "ignition": {
+                  "config": {},
+                  "proxy": {},
+                  "security": {},
+                  "timeouts": {},
+                  "version": "3.2.0"
+                },
+                "passwd": {
+                  "users": [
+                    {
+                      "name": "coreos",
+                      "sshAuthorizedKeys": [
+                        "ssh-rsa PUBLIC_SSH_KEY"
+                      ]
+                    }      
+                  ]
+                },
+                "storage": {},
+                "systemd": {}
+              }
+            networkData: |
+              {
+                "version": 2,
+                "ethernets": {
+                  "enp1s0": {
+                    "dhcp4": true
+                  },
+                 "enp2s0": {
+                   "dhcp4": true
+                 }
+                }
+              }
+          name: cloudinitdisk
+EOF
+
+sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" $N.yaml
+i=`expr $i + 1`
+done
+
+cat <<EOF > jump-eth2.yaml
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: jump-eth2
+spec:
+  config: >
+    {
+        "cniVersion": "0.3.1",
+        "name": "jump-eth2",
+        "plugins": [{
+            "type": "bridge",
+            "bridge": "eth2",
+            "vlan": 1234,
+            "ipam": {
+              "type": "static",
+                "addresses": [
+                  {
+                    "address": "10.244.1.19/24"
+                  }
+                ]
+            }
+        }]
+    }
+EOF
+
+cat <<EOF > jump.yaml
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: jumphost
+  name: rhcos
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: jumphost
+    spec:
+      domain:
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: containerdisk
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - name: default
+            bridge: {}
+          - name: eth2
+            bridge: {}
+        machine:
+          type: q35
+        resources:
+          requests:
+            memory: 4096M
+            cpu: "2000m"
+      networks:
+      - name: default
+        pod: {}
+      - name: eth2
+        multus:
+          networkName: default/jump-eth2
+      terminationGracePeriodSeconds: 0
+      volumes:
+      - containerDisk:
+          image: quay.io/containerdisks/centos:8.4
+        name: containerdisk
+      - cloudInitNoCloud:
+          networkData: |
+            version: 2
+            ethernets:
+              eth0:
+                dhcp4: true
+              eth1:
+                dhcp4: true      
+          userData: |
+            #cloud-config
+            hostname: jumphost
+            user: root
+            password: passwd
+            chpasswd: { expire: False }
+            ssh_pwauth: True
+            disable_root: false
+            ssh_authorized_keys:
+            - ssh-rsa PUBLIC_SSH_KEY
+          name: cloudinitdisk
+EOF
+
+sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" jump.yaml
+}
+#-------------------------------------------------------#
+
 # Excuting Function based on OS
 if [[ "$OS" == "Ubuntu" ]]; then
  ubulinux
@@ -571,4 +798,5 @@ sed -i "s/3.16.154.209/$PUBIP/g" wordpress.yaml
 kvsetup
 
 # VM Preparation YAML
-vmprep
+k8svmprep
+ocpvmprep
