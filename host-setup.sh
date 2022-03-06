@@ -197,6 +197,8 @@ metadata:
     app: containerized-data-importer
   annotations:
     #cdi.kubevirt.io/storage.import.endpoint: "https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.3.2011-20201204.2.x86_64.qcow2"
+    #cdi.kubevirt.io/storage.import.endpoint: "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-metal.x86_64.raw.gz"
+    #cdi.kubevirt.io/storage.import.endpoint: "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
     cdi.kubevirt.io/storage.import.endpoint: "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img"
     kubevirt.io/provisionOnNode: node
 spec:
@@ -372,7 +374,6 @@ metadata:
     app: containerized-data-importer
   annotations:
     #cdi.kubevirt.io/storage.import.endpoint: "http://download.microsoft.com/download/6/2/A/62A76ABB-9990-4EFC-A4FE-C7D698DAEB96/9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO"
-    #cdi.kubevirt.io/storage.import.endpoint: "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-metal.x86_64.raw.gz"    
     cdi.kubevirt.io/storage.import.endpoint: "https://software-download.microsoft.com/download/pr/17763.737.190906-2324.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us_1.iso"
     kubevirt.io/provisionOnNode: node
   name: win2k19
