@@ -16,19 +16,27 @@ JUMP=jumphost
 
 HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
 
-MAS1IP=ocpmaster1
-MAS2IP=ocpmaster2
-MAS3IP=ocpmaster3
-WOR1IP=ocpworker1
-WOR2IP=ocpworker2
-INF1IP=ocpinfra1
-INF2IP=ocpinfra2
-BOOTIP=bootstrap
+MAS1IP=10.244.1.217
+MAS2IP=10.244.1.218
+MAS3IP=10.244.1.219
+WOR1IP=10.244.1.220
+WOR2IP=10.244.1.221
+INF1IP=10.244.1.222
+INF2IP=10.244.1.223
+BOOTIP=10.244.1.216
 JUMPIP=$HIP
 
 PULLSECRET=`cat /pull/secret/file/path/`
 
+red=$(tput setaf 1)
+grn=$(tput setaf 2)
+yel=$(tput setaf 3)
+blu=$(tput setaf 4)
+bld=$(tput bold)
+nor=$(tput sgr0)
+
 # Download Openshift Software from Red Hat portal
+toolsetup() {
 
 wget -q https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-install-linux.tar.gz
 tar xpvf openshift-install-linux.tar.gz
@@ -45,7 +53,10 @@ wget -q https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/
 mkdir ~/ocp-install
 mv rhcos-* ~/ocp-install/
 
+}
+
 # Configure DNS Server
+dnssetup() {
 
 yum install bind bind-utils -y
 
@@ -60,13 +71,15 @@ cat <<EOF > /etc/named.conf
 //
 
 options {
-        listen-on port 53 { 127.0.0.1; $JUMPIP };
+        listen-on port 53 { 127.0.0.1; $JUMPIP; };
 #       listen-on-v6 port 53 { any; };
         directory       "/var/named";
         dump-file       "/var/named/data/cache_dump.db";
         statistics-file "/var/named/data/named_stats.txt";
         memstatistics-file "/var/named/data/named_mem_stats.txt";
-        allow-query     { localhost; 10.244.1.0/24 };
+        recursing-file  "/var/named/data/named.recursing";
+        secroots-file  "/var/named/data/named.secroots";
+        allow-query     { localhost; 10.244.1.0/24; };
 
         /*
          - If you are building an AUTHORITATIVE DNS server, do NOT enable recursion.
@@ -90,12 +103,11 @@ options {
         };
 
         /* Path to ISC DLV key */
-        bindkeys-file "/etc/named.iscdlv.key";
-
-        managed-keys-directory "/var/named/dynamic";
-
+//      bindkeys-file "/etc/named.iscdlv.key";
+//
+//      managed-keys-directory "/var/named/dynamic";
         pid-file "/run/named/named.pid";
-        session-keyfile "/run/named/session.key";
+//      session-keyfile "/run/named/session.key";
 };
 
 logging {
@@ -112,12 +124,12 @@ zone "." IN {
 
 zone "$DOMAIN" IN {
   type master;
-  file "/var/named/zones/db.$DOMAIN";
+  file "/etc/named/zones/db.$DOMAIN";
 };
 
 zone "1.244.10.in.addr.arpa" {
   type master;
-  file "/var/named/zones/db.reverse";
+  file "/etc/named/zones/db.reverse";
 };
 
 include "/etc/named.rfc1912.zones";
@@ -126,7 +138,7 @@ EOF
 
 mkdir /etc/named/zones
 cat <<EOF > /etc/named/zones/db.$DOMAIN
-$TTL    604800
+\$TTL    604800
 @   	IN  	SOA 	$JUMP.$DOMAIN. contact.$DOMAIN (
                   1     ; Serial
              604800     ; Refresh
@@ -176,7 +188,7 @@ console-openshift-console.apps.lab.$DOMAIN.	IN	A	$JUMPIP
 EOF
 
 cat <<EOF > /etc/named/zones/db.reverse
-$TTL    604800
+\$TTL    604800
 @   	IN  	SOA 	$JUMP.$DOMAIN. contact.$DOMAIN (
                   1     ; Serial
              604800     ; Refresh
@@ -194,7 +206,7 @@ $TTL    604800
 ;
 217	IN	PTR	$MAS1.lab.$DOMAIN.
 218	IN	PTR	$MAS2.lab.$DOMAIN.
-219	IN	PTR	$MAs3.lab.$DOMAIN.
+219	IN	PTR	$MAS3.lab.$DOMAIN.
 ;
 220	IN	PTR	$WOR1.lab.$DOMAIN.
 221	IN	PTR	$WOR1.lab.$DOMAIN.
@@ -203,13 +215,17 @@ $TTL    604800
 223	IN	PTR	$INF2.lab.$DOMAIN.
 EOF
 
-systemctl start named;systemctl enable named
+systemctl start named;systemctl enable named;systemctl status named
 firewall-cmd --add-port=53/udp --zone=internal --permanent
 firewall-cmd --reload
 
-# Configure DHCP Server 
+}
 
-yum install dhcp-server -y 
+# Configure DHCP Server 
+dhcpsetup() {
+
+yum install dhcp -y 
+#yum install dhcp-server -y
 
 cat <<EOF > /etc/dhcp/dhcpd.conf
 authoritative;
@@ -270,20 +286,23 @@ host $INF2 {
 
 EOF
 
-systemctl start dhcpd;systemctl enable dhcpd
+systemctl start dhcpd;systemctl enable dhcpd;systemctl status dhcpd
 firewall-cmd --add-service=dhcp --zone=internal --permanent
 firewall-cmd --reload
-
+}
 
 # Configure Apache Web Server
+websetup() {
 
 yum install -y httpd
 sed -i 's/Listen 80/Listen 0.0.0.0:8080/' /etc/httpd/conf/httpd.conf
-systemctl start httpd;systemctl enable httpd
+systemctl start httpd;systemctl enable httpd;systemctl status httpd
 firewall-cmd --add-port=8080/tcp --zone=internal --permanent
 firewall-cmd --reload
+}
 
 # Configure HAProxy
+lbsetup() {
 
 yum install haproxy -y 
 
@@ -388,7 +407,7 @@ backend ocp_https_ingress_backend
 EOF
 
 setsebool -P haproxy_connect_any 1
-systemctl start haproxy;systemctl enable haproxy
+systemctl start haproxy;systemctl enable haproxy;systemctl status haproxy
 
 firewall-cmd --add-port=6443/tcp --zone=internal --permanent
 firewall-cmd --add-port=6443/tcp --zone=external --permanent
@@ -399,8 +418,10 @@ firewall-cmd --add-service=https --zone=internal --permanent
 firewall-cmd --add-service=https --zone=external --permanent
 firewall-cmd --add-port=9000/tcp --zone=external --permanent
 firewall-cmd --reload
+}
 
 # Configure NFS Server
+nfssetup() {
 
 yum install nfs-utils -y
 mkdir -p /shares/registry
@@ -408,20 +429,22 @@ chown -R nobody:nobody /shares/registry
 chmod -R 777 /shares/registry
 
 cat <<EOF > /etc/exports
-/shares/registry  10.244.1.0/24(rw,sync,root_squash,no_subtree_check,no_wdelay)
+/shares/registry  *(rw,sync,no_subtree_check,no_root_squash,no_all_squash,insecure,no_wdelay)
 EOF
 
-exportfs -rv
-exporting 10.244.1.0/24:/shares/registry
-
-systemctl start nfs-server rpcbind nfs-mountd;systemctl enable nfs-server rpcbind
+exportfs -rav
+exportfs -v
+systemctl start nfs-server rpcbind nfs-mountd;systemctl enable nfs-server rpcbind;systemctl start nfs-server
 
 firewall-cmd --zone=internal --add-service mountd --permanent
 firewall-cmd --zone=internal --add-service rpc-bind --permanent
 firewall-cmd --zone=internal --add-service nfs --permanent
 firewall-cmd --reload
 
+}
+
 # Generate Manifests and Ignition files
+manifes() {
 
 # Generate SSH Key
 ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1
@@ -475,3 +498,54 @@ chown -R apache: /var/www/html/ocp4/
 chmod 755 /var/www/html/ocp4/
 
 curl localhost:8080/ocp4/
+}
+
+# Install ALL
+setupall () {
+
+toolsetup
+dnssetup
+dhcpsetup
+websetup
+lbsetup
+nfssetup
+manifes
+}
+
+case "$1" in
+    'toolsetup')
+            toolsetup
+            ;;
+    'dnssetup')
+            dnssetup
+            ;;
+    'dhcpsetup')
+            dhcpsetup
+            ;;
+    'websetup')
+            websetup
+            ;;
+    'lbsetup')
+            lbsetup
+            ;;
+    'nfssetup')
+            nfssetup
+            ;;
+    'manifes')
+            manifes
+            ;;
+    'setupall')
+            setupall
+            ;;
+    *)
+            clear
+            echo
+            echo "$bld$blu Openshift Jumphost (DNS,LB,NFS,DHCP,WEB) host setup script $nor"
+            echo
+            echo "$bld$grn Usage: $0 { toolsetup | dnssetup | dhcpsetup | websetup | lbsetup | nfssetup | manifes | setupall } $nor"
+            echo
+            exit 1
+            ;;
+esac
+
+exit 0
