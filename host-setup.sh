@@ -798,5 +798,5 @@ sed -i "s/3.16.154.209/$PUBIP/g" wordpress.yaml
 kvsetup
 
 # VM Preparation YAML
-k8svmprep
+#k8svmprep
 ocpvmprep
