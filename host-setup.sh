@@ -621,6 +621,8 @@ EOF
 
 sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" $N.yaml
 i=`expr $i + 1`
+
+kubectl create -f $N-eth2.yaml
 done
 
 cat <<EOF > jump-eth2.yaml
@@ -716,7 +718,10 @@ spec:
 EOF
 
 sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" jump.yaml
+kubectl create -f jump-eth2.yaml
 }
+
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/ocp-jumphost.sh
 #-------------------------------------------------------#
 
 # Excuting Function based on OS
