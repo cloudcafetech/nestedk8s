@@ -301,7 +301,7 @@ spec:
         name: cloudinitdisk
 EOF
 
-sed -i "s%ssh-rsa.*%$PUBKEY%" $C-$N.yaml
+sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" $C-$N.yaml
 done
 done
 
