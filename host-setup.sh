@@ -528,7 +528,7 @@ spec:
               "type": "static",
                 "addresses": [
                   {
-                    "address": "10.244.1.1$i/24"
+                    "address": "10.244.1.3$i/24"
                   }
                 ]
             }
@@ -641,7 +641,7 @@ spec:
               "type": "static",
                 "addresses": [
                   {
-                    "address": "10.244.1.19/24"
+                    "address": "10.244.1.39/24"
                   }
                 ]
             }
