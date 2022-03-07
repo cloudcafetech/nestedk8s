@@ -15,6 +15,8 @@ BOOT=bootstrap
 JUMP=jumphost
 
 HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
+SUBNET=`echo $HIP | cut -d. -f1-3`
+REV=`echo $SUBNET | awk -F . '{print $3"."$2"."$1".in.addr.arpa"}' `
 
 MAS1IP=10.244.1.217
 MAS2IP=10.244.1.218
@@ -81,7 +83,7 @@ options {
         memstatistics-file "/var/named/data/named_mem_stats.txt";
         recursing-file  "/var/named/data/named.recursing";
         secroots-file  "/var/named/data/named.secroots";
-        allow-query     { localhost; 10.244.1.0/24; };
+        allow-query     { localhost; $SUBNET.0/24; };
 
         /*
          - If you are building an AUTHORITATIVE DNS server, do NOT enable recursion.
@@ -129,7 +131,7 @@ zone "$DOMAIN" IN {
   file "/etc/named/zones/db.$DOMAIN";
 };
 
-zone "1.244.10.in.addr.arpa" {
+zone "$REV" {
   type master;
   file "/etc/named/zones/db.reverse";
 };
@@ -239,12 +241,12 @@ allow unknown-clients;
 ignore client-updates;
 default-lease-time 14400;
 max-lease-time 14400;
-subnet 10.244.1.0 netmask 255.255.255.0 {
+subnet $SUBNET.0 netmask 255.255.255.0 {
  option routers                  $JUMPIP; # lan
  option subnet-mask              255.255.255.0;
  option domain-name              "$DOMAIN";
  option domain-name-servers       $JUMPIP;
- range $BOOTIP 10.244.1.245;
+ range $BOOTIP $SUBNET.245;
 }
 
 host $BOOT {
