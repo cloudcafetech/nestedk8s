@@ -258,7 +258,7 @@ subnet $SUBNET.0 netmask 255.255.255.0 {
  option subnet-mask              255.255.255.0;
  option domain-name              "$DOMAIN";
  option domain-name-servers       $JUMPIP;
- range $BOOTIP $SUBNET.245;
+ range $SUBNET.1 $SUBNET.245;
 }
 
 host $BOOT {
