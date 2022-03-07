@@ -30,7 +30,7 @@ JUMPIP=10.244.1.214
 JUMP2IP=10.244.1.215
 OCLBVIP=10.244.1.225
 
-PULLSECRET=`cat /pull/secret/file/path/`
+PULLSECRET='copy-and-paste-secret-file'
 
 red=$(tput setaf 1)
 grn=$(tput setaf 2)
@@ -550,7 +550,7 @@ networking:
 platform:
   none: {}
 fips: false
-pullSecret: '{PULL_SECRET}'  
+pullSecret: 'PULL_SECRET'  
 sshKey: "ssh-rsa PUBLIC_SSH_KEY"  
 
 EOF
