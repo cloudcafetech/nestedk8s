@@ -13,6 +13,8 @@ INF1=ocpinfra1
 INF2=ocpinfra2
 BOOT=bootstrap
 JUMP=jumphost
+JUMP2=jumphost2
+OCLB=ocplb
 
 HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
 
@@ -24,7 +26,9 @@ WOR2IP=10.244.1.221
 INF1IP=10.244.1.222
 INF2IP=10.244.1.223
 BOOTIP=10.244.1.216
-JUMPIP=$HIP
+JUMPIP=10.244.1.214
+JUMP2IP=10.244.1.215
+OCLBVIP=10.244.1.225
 
 PULLSECRET=`cat /pull/secret/file/path/`
 
@@ -38,6 +42,7 @@ nor=$(tput sgr0)
 # Download Openshift Software from Red Hat portal
 toolsetup() {
 
+echo "$bld$grn Downloading & Installing Openshift Software $nor"
 wget -q https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-install-linux.tar.gz
 tar xpvf openshift-install-linux.tar.gz
 rm -rf openshift-install-linux.tar.gz
@@ -58,6 +63,7 @@ mv rhcos-* ~/ocp-install/
 # Configure DNS Server
 dnssetup() {
 
+echo "$bld$grn Configuring DNS Server $nor"
 yum install bind bind-utils -y
 
 cat <<EOF > /etc/named.conf
@@ -72,6 +78,7 @@ cat <<EOF > /etc/named.conf
 
 options {
         listen-on port 53 { 127.0.0.1; $JUMPIP; };
+//        listen-on port 53 { 127.0.0.1; $JUMP2IP; };
 #       listen-on-v6 port 53 { any; };
         directory       "/var/named";
         dump-file       "/var/named/data/cache_dump.db";
@@ -140,6 +147,7 @@ mkdir /etc/named/zones
 cat <<EOF > /etc/named/zones/db.$DOMAIN
 \$TTL    604800
 @   	IN  	SOA 	$JUMP.$DOMAIN. contact.$DOMAIN (
+;@   	IN  	SOA 	$JUMP2.$DOMAIN. contact.$DOMAIN (
                   1     ; Serial
              604800     ; Refresh
               86400     ; Retry
@@ -147,8 +155,11 @@ cat <<EOF > /etc/named/zones/db.$DOMAIN
              604800     ; Minimum
 )
 	IN  	NS  	$JUMP
+;	IN  	NS  	$JUMP2
 
 $JUMP.$DOMAIN.		IN	A	$JUMPIP
+$JUMP2.$DOMAIN.		IN	A	$JUMP2IP
+$OCLB.$DOMAIN.		IN	A	$OCLBVIP
 
 ; Temp Bootstrap Node
 $BOOT.$DOMAIN.		IN	A	$BOOTIP
@@ -190,6 +201,7 @@ EOF
 cat <<EOF > /etc/named/zones/db.reverse
 \$TTL    604800
 @   	IN  	SOA 	$JUMP.$DOMAIN. contact.$DOMAIN (
+;@   	IN  	SOA 	$JUMP2.$DOMAIN. contact.$DOMAIN (
                   1     ; Serial
              604800     ; Refresh
               86400     ; Retry
@@ -197,12 +209,14 @@ cat <<EOF > /etc/named/zones/db.reverse
              604800     ; Minimum
 )
 	IN  	NS  	$JUMP.$DOMAIN.
+;	IN  	NS  	$JUMP2.$DOMAIN.
 
-215	IN	PTR	$JUMP.$DOMAIN.
-215	IN	PTR	api.lab.$DOMAIN.
-215	IN	PTR	api-int.lab.$DOMAIN.
+214	IN	PTR	$JUMP.$DOMAIN.
+215	IN	PTR	$JUMP2.$DOMAIN.
+225	IN	PTR	api.lab.$DOMAIN.
+225	IN	PTR	api-int.lab.$DOMAIN.
 ;
-216	IN	PTR	$JUMP.$DOMAIN.
+216	IN	PTR	$BOOT.lab.$DOMAIN.
 ;
 217	IN	PTR	$MAS1.lab.$DOMAIN.
 218	IN	PTR	$MAS2.lab.$DOMAIN.
@@ -224,6 +238,7 @@ firewall-cmd --reload
 # Configure DHCP Server 
 dhcpsetup() {
 
+echo "$bld$grn Configuring DHCP Server $nor"
 yum install dhcp -y 
 #yum install dhcp-server -y
 
@@ -291,9 +306,66 @@ firewall-cmd --add-service=dhcp --zone=internal --permanent
 firewall-cmd --reload
 }
 
+# Configure Keepalive Server
+keepsetup() {
+
+echo "$bld$grn Configuring Keepalive Server $nor"
+yum install keepalived psmisc -y
+
+cat <<EOF > /etc/keepalived/keepalived.conf
+
+global_defs {
+  notification_email {
+  }
+  router_id LVS_DEVEL
+  vrrp_skip_check_adv_addr
+  vrrp_garp_interval 0
+  vrrp_gna_interval 0
+}
+   
+vrrp_script chk_haproxy {
+  script "killall -0 haproxy"
+  interval 2
+  weight 2
+}
+   
+vrrp_instance haproxy-vip {
+  state MASTER
+#  state BACKUP
+  priority 100
+  interface eth0                       	# Network card
+  virtual_router_id 60
+  advert_int 1
+  authentication {
+    auth_type PASS
+    auth_pass 1111
+  }
+  unicast_src_ip $JUMPIP      		# The IP address of this machine
+#  unicast_src_ip $JUMP2IP      	# The IP address of this machine
+  unicast_peer {
+    $JUMP2IP                         	# The IP address of peer machines
+#    $JUMPIP                         	# The IP address of peer machines
+  }
+   
+  virtual_ipaddress {
+    $OCLBVIP/24                  	# The VIP address
+  }
+   
+  track_script {
+    chk_haproxy
+  }
+}
+
+EOF
+
+systemctl start keepalived;systemctl enable keepalived;systemctl status keepalived
+
+}
+
 # Configure Apache Web Server
 websetup() {
 
+echo "$bld$grn Configuring Apache Web Server $nor"
 yum install -y httpd
 sed -i 's/Listen 80/Listen 0.0.0.0:8080/' /etc/httpd/conf/httpd.conf
 systemctl start httpd;systemctl enable httpd;systemctl status httpd
@@ -301,9 +373,10 @@ firewall-cmd --add-port=8080/tcp --zone=internal --permanent
 firewall-cmd --reload
 }
 
-# Configure HAProxy
+# Configure HAProxy server
 lbsetup() {
 
+echo "$bld$grn Configuring HAProxy Server $nor"
 yum install haproxy -y 
 
 cat <<EOF > /etc/haproxy/haproxy.cfg
@@ -423,6 +496,7 @@ firewall-cmd --reload
 # Configure NFS Server
 nfssetup() {
 
+echo "$bld$grn Configuring NFS Server $nor"
 yum install nfs-utils -y
 mkdir -p /shares/registry
 chown -R nobody:nobody /shares/registry
@@ -446,6 +520,7 @@ firewall-cmd --reload
 # Generate Manifests and Ignition files
 manifes() {
 
+echo "$bld$grn Generating Manifests and Ignition files $nor"
 # Generate SSH Key
 ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1
 PUBKEY=`cat ~/.ssh/id_rsa.pub`
@@ -507,6 +582,7 @@ toolsetup
 dnssetup
 dhcpsetup
 websetup
+keepsetup
 lbsetup
 nfssetup
 manifes
@@ -525,6 +601,9 @@ case "$1" in
     'websetup')
             websetup
             ;;
+    'keepsetup')
+            keepsetup
+            ;;
     'lbsetup')
             lbsetup
             ;;
@@ -542,7 +621,7 @@ case "$1" in
             echo
             echo "$bld$blu Openshift Jumphost (DNS,LB,NFS,DHCP,WEB) host setup script $nor"
             echo
-            echo "$bld$grn Usage: $0 { toolsetup | dnssetup | dhcpsetup | websetup | lbsetup | nfssetup | manifes | setupall } $nor"
+            echo "$bld$grn Usage: $0 { toolsetup | dnssetup | dhcpsetup | keepsetup | websetup | lbsetup | nfssetup | manifes | setupall } $nor"
             echo
             exit 1
             ;;
