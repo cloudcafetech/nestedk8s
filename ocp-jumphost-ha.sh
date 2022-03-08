@@ -2,7 +2,7 @@
 # Openshift Jumphost (DNS,LB,NFS,DHCP,WEB) host setup script
 # Ref: (https://www.linuxtechi.com/install-openshift-baremetal-upi/)
 
-DOMAIN=linuxtechi.lan
+DOMAIN=cloudcafe.in
 
 MAS1=ocpmaster1
 MAS2=ocpmaster2
