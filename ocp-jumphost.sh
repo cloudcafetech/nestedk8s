@@ -226,7 +226,7 @@ cat <<EOF > /etc/named/zones/db.reverse
 219	IN	PTR	$MAS3.lab.$DOMAIN.
 ;
 220	IN	PTR	$WOR1.lab.$DOMAIN.
-221	IN	PTR	$WOR1.lab.$DOMAIN.
+221	IN	PTR	$WOR2.lab.$DOMAIN.
 ;
 222	IN	PTR	$INF1.lab.$DOMAIN.
 223	IN	PTR	$INF2.lab.$DOMAIN.
@@ -235,7 +235,8 @@ cat <<EOF > /etc/named/zones/db.reverse
 215	IN	PTR	api-int.lab.$DOMAIN.
 EOF
 
-systemctl start named;systemctl enable named;systemctl status named
+echo 'OPTIONS="-4"' >>/etc/sysconfig/named
+systemctl start named;systemctl enable named
 firewall-cmd --add-port=53/udp --permanent
 firewall-cmd --reload
 
@@ -307,7 +308,7 @@ host $INF2 {
 
 EOF
 
-systemctl start dhcpd;systemctl enable dhcpd;systemctl status dhcpd
+systemctl start dhcpd;systemctl enable dhcpd
 firewall-cmd --add-service=dhcp --permanent
 firewall-cmd --reload
 }
@@ -319,7 +320,7 @@ echo "$bld$grn Configuring Apache Web Server $nor"
 yum install -y httpd
 sed -i 's/Listen 80/Listen 0.0.0.0:8080/' /etc/httpd/conf/httpd.conf
 setsebool -P httpd_read_user_content 1
-systemctl start httpd;systemctl enable httpd;systemctl status httpd
+systemctl start httpd;systemctl enable httpd
 firewall-cmd --add-port=8080/tcp --permanent
 firewall-cmd --reload
 }
@@ -431,7 +432,7 @@ backend ocp_https_ingress_backend
 EOF
 
 setsebool -P haproxy_connect_any 1
-systemctl start haproxy;systemctl enable haproxy;systemctl status haproxy
+systemctl start haproxy;systemctl enable haproxy
 
 firewall-cmd --add-port=6443/tcp --permanent
 firewall-cmd --add-port=6443/tcp --zone=external --permanent
@@ -458,7 +459,7 @@ cat <<EOF > /etc/exports
 EOF
 
 setsebool -P nfs_export_all_rw 1
-systemctl start nfs-server rpcbind nfs-mountd;systemctl enable nfs-server rpcbind;systemctl start nfs-server
+systemctl start nfs-server rpcbind nfs-mountd;systemctl enable nfs-server rpcbind
 exportfs -rav
 exportfs -v
 
