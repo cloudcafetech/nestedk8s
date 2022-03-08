@@ -246,7 +246,7 @@ dhcpsetup() {
 
 echo "$bld$grn Configuring DHCP Server $nor"
 yum install dhcp -y 
-#yum install dhcp-server -y
+yum install dhcp-server -y
 
 cat <<EOF > /etc/dhcp/dhcpd.conf
 authoritative;
