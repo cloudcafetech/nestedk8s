@@ -722,6 +722,9 @@ kubectl create -f jump-eth2.yaml
 }
 
 wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/ocp-jumphost.sh
+docker pull quay.io/containerdisks/centos:8.4
+docker pull quay.io/containerdisks/rhcos:4.9
+
 #-------------------------------------------------------#
 
 # Excuting Function based on OS
@@ -738,6 +741,8 @@ if [[ "$master" == "node" ]]; then
   echo "Waiting for Master ($KUBEMASTER) API response .."
   while ! echo break | nc $KUBEMASTER 6443 &> /dev/null; do printf '.'; sleep 2; done
   kubeadm join --discovery-token-unsafe-skip-ca-verification --token=$TOKEN $KUBEMASTER:6443
+  docker pull quay.io/containerdisks/centos:8.4
+  docker pull quay.io/containerdisks/rhcos:4.9  
   exit
 fi
 
