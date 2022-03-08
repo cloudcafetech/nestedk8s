@@ -2,8 +2,9 @@
 # Openshift Jumphost (DNS,LB,NFS,DHCP,WEB) host setup script
 # Ref: (https://www.linuxtechi.com/install-openshift-baremetal-upi/)
 
-DOMAIN=linuxtechi.lan
+DOMAIN=cloudcafe.in
 
+BOOT=bootstrap
 MAS1=ocpmaster1
 MAS2=ocpmaster2
 MAS3=ocpmaster3
@@ -11,24 +12,35 @@ WOR1=ocpworker1
 WOR2=ocpworker2
 INF1=ocpinfra1
 INF2=ocpinfra2
-BOOT=bootstrap
 JUMP=jumphost
 
 HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
 SUBNET=`echo $HIP | cut -d. -f1-3`
-REV=`echo $SUBNET | awk -F . '{print $3"."$2"."$1".in.addr.arpa"}' `
+REV=`echo $SUBNET | awk -F . '{print $3"."$2"."$1".in-addr.arpa"}' `
 
-MAS1IP=10.244.1.217
-MAS2IP=10.244.1.218
-MAS3IP=10.244.1.219
-WOR1IP=10.244.1.220
-WOR2IP=10.244.1.221
-INF1IP=10.244.1.222
-INF2IP=10.244.1.223
-BOOTIP=10.244.1.216
+BOOTIP=$SUBNET.216
+MAS1IP=$SUBNET.217
+MAS2IP=$SUBNET.218
+MAS3IP=$SUBNET.219
+WOR1IP=$SUBNET.220
+WOR2IP=$SUBNET.221
+INF1IP=$SUBNET.222
+INF2IP=$SUBNET.223
 JUMPIP=$HIP
 
-PULLSECRET='copy-and-paste-secret-file'
+BOOTMAC=52:54:00:bf:60:a3
+MAS1MAC=52:54:00:98:49:40
+MAS2MAC=52:54:00:fe:8a:7c
+MAS3MAC=52:54:00:58:d3:31
+WOR1MAC=52:54:00:38:8c:dd
+WOR2MAC=52:54:00:b8:84:40
+INF1MAC=52:54:00:b8:84:41
+INF2MAC=52:54:00:b8:84:42
+
+
+
+PULLSECRET='{"auths":{"fake":{"auth": "bar"}}}'
+#PULLSECRET='copy-and-paste-secret-file'
 
 red=$(tput setaf 1)
 grn=$(tput setaf 2)
@@ -102,7 +114,7 @@ options {
 //      dnssec-lookaside auto;
         # Using Google DNS
         forwarders {
-                169.144.104.22;
+                8.8.8.8;
                 8.8.4.4;
         };
 
@@ -152,6 +164,7 @@ cat <<EOF > /etc/named/zones/db.$DOMAIN
 )
 	IN  	NS  	$JUMP
 
+; Name server - A records
 $JUMP.$DOMAIN.		IN	A	$JUMPIP
 
 ; Temp Bootstrap Node
@@ -200,13 +213,15 @@ cat <<EOF > /etc/named/zones/db.reverse
             2419200     ; Expire
              604800     ; Minimum
 )
+
+; Name servers - NS records
 	IN  	NS  	$JUMP.$DOMAIN.
 
+; Name servers - PTR records
 215	IN	PTR	$JUMP.$DOMAIN.
-215	IN	PTR	api.lab.$DOMAIN.
-215	IN	PTR	api-int.lab.$DOMAIN.
-;
-216	IN	PTR	$JUMP.$DOMAIN.
+
+; OpenShift Container Platform Cluster - PTR records
+216	IN	PTR	$BOOT.$DOMAIN.
 ;
 217	IN	PTR	$MAS1.lab.$DOMAIN.
 218	IN	PTR	$MAS2.lab.$DOMAIN.
@@ -217,10 +232,13 @@ cat <<EOF > /etc/named/zones/db.reverse
 ;
 222	IN	PTR	$INF1.lab.$DOMAIN.
 223	IN	PTR	$INF2.lab.$DOMAIN.
+;
+215	IN	PTR	api.lab.$DOMAIN.
+215	IN	PTR	api-int.lab.$DOMAIN.
 EOF
 
 systemctl start named;systemctl enable named;systemctl status named
-firewall-cmd --add-port=53/udp --zone=internal --permanent
+firewall-cmd --add-port=53/udp --permanent
 firewall-cmd --reload
 
 }
@@ -250,49 +268,49 @@ subnet $SUBNET.0 netmask 255.255.255.0 {
 }
 
 host $BOOT {
- hardware ethernet 52:54:00:bf:60:a3;
+ hardware ethernet $BOOTMAC;
  fixed-address $BOOTIP;
 }
 
 host $MAS1 {
- hardware ethernet 52:54:00:98:49:40;
+ hardware ethernet $MAS1MAC;
  fixed-address $MAS1IP;
 }
 
 host $MAS2 {
- hardware ethernet 52:54:00:fe:8a:7c;
+ hardware ethernet $MAS1MAC;
  fixed-address $MAS2IP;
 }
 
 host $MAS3 {
- hardware ethernet 52:54:00:58:d3:31;
+ hardware ethernet $MAS3MAC;
  fixed-address $MAS3IP;
 }
 
 host $WOR1 {
- hardware ethernet 52:54:00:38:8c:dd;
+ hardware ethernet $WOR1MAC;
  fixed-address $WOR1IP;
 }
 
 host $WOR2 {
- hardware ethernet 52:54:00:b8:84:40;
+ hardware ethernet $WOR2MAC;
  fixed-address $WOR2IP;
 }
 
 host $INF1 {
- hardware ethernet 52:54:00:b8:84:40;
+ hardware ethernet $INF1MAC;
  fixed-address $INF1IP;
 }
 
 host $INF2 {
- hardware ethernet 52:54:00:b8:84:40;
+ hardware ethernet $INF2MAC;
  fixed-address $INF2IP;
 }
 
 EOF
 
 systemctl start dhcpd;systemctl enable dhcpd;systemctl status dhcpd
-firewall-cmd --add-service=dhcp --zone=internal --permanent
+firewall-cmd --add-service=dhcp --permanent
 firewall-cmd --reload
 }
 
@@ -302,8 +320,9 @@ websetup() {
 echo "$bld$grn Configuring Apache Web Server $nor"
 yum install -y httpd
 sed -i 's/Listen 80/Listen 0.0.0.0:8080/' /etc/httpd/conf/httpd.conf
+setsebool -P httpd_read_user_content 1
 systemctl start httpd;systemctl enable httpd;systemctl status httpd
-firewall-cmd --add-port=8080/tcp --zone=internal --permanent
+firewall-cmd --add-port=8080/tcp --permanent
 firewall-cmd --reload
 }
 
@@ -416,12 +435,12 @@ EOF
 setsebool -P haproxy_connect_any 1
 systemctl start haproxy;systemctl enable haproxy;systemctl status haproxy
 
-firewall-cmd --add-port=6443/tcp --zone=internal --permanent
+firewall-cmd --add-port=6443/tcp --permanent
 firewall-cmd --add-port=6443/tcp --zone=external --permanent
-firewall-cmd --add-port=22623/tcp --zone=internal --permanent
-firewall-cmd --add-service=http --zone=internal --permanent
+firewall-cmd --add-port=22623/tcp --permanent
+firewall-cmd --add-service=http --permanent
 firewall-cmd --add-service=http --zone=external --permanent
-firewall-cmd --add-service=https --zone=internal --permanent
+firewall-cmd --add-service=https --permanent
 firewall-cmd --add-service=https --zone=external --permanent
 firewall-cmd --add-port=9000/tcp --zone=external --permanent
 firewall-cmd --reload
@@ -440,13 +459,14 @@ cat <<EOF > /etc/exports
 /shares/registry  *(rw,sync,no_subtree_check,no_root_squash,no_all_squash,insecure,no_wdelay)
 EOF
 
+setsebool -P nfs_export_all_rw 1
+systemctl start nfs-server rpcbind nfs-mountd;systemctl enable nfs-server rpcbind;systemctl start nfs-server
 exportfs -rav
 exportfs -v
-systemctl start nfs-server rpcbind nfs-mountd;systemctl enable nfs-server rpcbind;systemctl start nfs-server
 
-firewall-cmd --zone=internal --add-service mountd --permanent
-firewall-cmd --zone=internal --add-service rpc-bind --permanent
-firewall-cmd --zone=internal --add-service nfs --permanent
+firewall-cmd --add-service mountd --permanent
+firewall-cmd --add-service rpc-bind --permanent
+firewall-cmd --add-service nfs --permanent
 firewall-cmd --reload
 
 }
@@ -491,6 +511,7 @@ EOF
 
 sed -i "s%PULL_SECRET%$PULLSECRET%" ~/ocp-install/install-config.yaml
 sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" ~/ocp-install/install-config.yaml
+cp ~/ocp-install/install-config.yaml ~/ocp-install/install-config.yaml-bak
 cp ~/ocp-install/install-config.yaml install-config.yaml
 
 mkdir /var/www/html/ocp4
