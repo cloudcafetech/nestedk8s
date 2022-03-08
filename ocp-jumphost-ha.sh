@@ -18,7 +18,7 @@ OCLB=ocplb
 
 HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
 SUBNET=`echo $HIP | cut -d. -f1-3`
-REV=`echo $SUBNET | awk -F . '{print $3"."$2"."$1".in.addr.arpa"}' `
+REV=`echo $SUBNET | awk -F . '{print $3"."$2"."$1".in-addr.arpa"}' `
 
 MAS1IP=10.244.1.217
 MAS2IP=10.244.1.218
