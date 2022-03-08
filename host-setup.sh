@@ -550,6 +550,8 @@ spec:
       labels:
         kubevirt.io/vm: $N
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: node    
       domain:
         devices:
           disks:
@@ -665,6 +667,8 @@ spec:
       labels:
         kubevirt.io/vm: jumphost
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: node    
       domain:
         devices:
           disks:
@@ -714,7 +718,7 @@ spec:
             disable_root: false
             ssh_authorized_keys:
             - ssh-rsa PUBLIC_SSH_KEY
-          name: cloudinitdisk
+        name: cloudinitdisk
 EOF
 
 sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" jump.yaml
