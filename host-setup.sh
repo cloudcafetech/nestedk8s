@@ -496,6 +496,7 @@ chmod +x *-cluster.sh
 ####### OCP VM Preparation Function ##############
 ocpvmprep() {
 
+BOOT=bootstrap
 MAS1=ocpmaster1
 MAS2=ocpmaster2
 MAS3=ocpmaster3
@@ -503,12 +504,11 @@ WOR1=ocpworker1
 WOR2=ocpworker2
 INF1=ocpinfra1
 INF2=ocpinfra2
-BOOT=bootstrap
 JUMP=jumphost
 
 # VM yaml generate
-i=1
-for N in $MAS1 $MAS2 $MAS3 $WOR1 $WOR2 $INF1 $INF2 $BOOT 
+i=16
+for N in $BOOT $MAS1 $MAS2 $MAS3 $WOR1 $WOR2 $INF1 $INF2 
 do
 cat <<EOF > $N-eth2.yaml
 apiVersion: "k8s.cni.cncf.io/v1"
@@ -528,7 +528,7 @@ spec:
               "type": "static",
                 "addresses": [
                   {
-                    "address": "10.244.1.3$i/24"
+                    "address": "10.244.1.2$i/24"
                   }
                 ]
             }
@@ -643,7 +643,7 @@ spec:
               "type": "static",
                 "addresses": [
                   {
-                    "address": "10.244.1.39/24"
+                    "address": "10.244.1.215/24"
                   }
                 ]
             }
