@@ -718,6 +718,10 @@ spec:
             disable_root: false
             ssh_authorized_keys:
             - ssh-rsa PUBLIC_SSH_KEY
+            runcmd:
+              - cd /etc/yum.repos.d/
+              - sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+              - sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*            
         name: cloudinitdisk
 EOF
 
