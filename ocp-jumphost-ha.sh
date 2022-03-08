@@ -20,19 +20,30 @@ HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
 SUBNET=`echo $HIP | cut -d. -f1-3`
 REV=`echo $SUBNET | awk -F . '{print $3"."$2"."$1".in-addr.arpa"}' `
 
-MAS1IP=10.244.1.217
-MAS2IP=10.244.1.218
-MAS3IP=10.244.1.219
-WOR1IP=10.244.1.220
-WOR2IP=10.244.1.221
-INF1IP=10.244.1.222
-INF2IP=10.244.1.223
-BOOTIP=10.244.1.216
-JUMPIP=10.244.1.214
-JUMP2IP=10.244.1.215
-OCLBVIP=10.244.1.225
+BOOTIP=$SUBNET.216
+MAS1IP=$SUBNET.217
+MAS2IP=$SUBNET.218
+MAS3IP=$SUBNET.219
+WOR1IP=$SUBNET.220
+WOR2IP=$SUBNET.221
+INF1IP=$SUBNET.222
+INF2IP=$SUBNET.223
+JUMPIP=$SUBNET.214
+JUMP2IP=$SUBNET.215
+OCLBVIP=$SUBNET.225
 
-PULLSECRET='copy-and-paste-secret-file'
+BOOTMAC=52:54:00:bf:60:a3
+MAS1MAC=52:54:00:98:49:40
+MAS2MAC=52:54:00:fe:8a:7c
+MAS3MAC=52:54:00:58:d3:31
+WOR1MAC=52:54:00:38:8c:dd
+WOR2MAC=52:54:00:b8:84:40
+INF1MAC=52:54:00:b8:84:41
+INF2MAC=52:54:00:b8:84:42
+
+PULLSECRET='{"auths":{"fake":{"auth": "bar"}}}'
+#PULLSECRET='copy-and-paste-secret-file'
+
 
 red=$(tput setaf 1)
 grn=$(tput setaf 2)
@@ -262,42 +273,42 @@ subnet $SUBNET.0 netmask 255.255.255.0 {
 }
 
 host $BOOT {
- hardware ethernet 52:54:00:bf:60:a3;
+ hardware ethernet $BOOTMAC;
  fixed-address $BOOTIP;
 }
 
 host $MAS1 {
- hardware ethernet 52:54:00:98:49:40;
+ hardware ethernet $MAS1MAC;
  fixed-address $MAS1IP;
 }
 
 host $MAS2 {
- hardware ethernet 52:54:00:fe:8a:7c;
+ hardware ethernet $MAS2MAC;
  fixed-address $MAS2IP;
 }
 
 host $MAS3 {
- hardware ethernet 52:54:00:58:d3:31;
+ hardware ethernet $MAS3MAC;
  fixed-address $MAS3IP;
 }
 
 host $WOR1 {
- hardware ethernet 52:54:00:38:8c:dd;
+ hardware ethernet $WOR1MAC;
  fixed-address $WOR1IP;
 }
 
 host $WOR2 {
- hardware ethernet 52:54:00:b8:84:40;
+ hardware ethernet $WOR2MAC;
  fixed-address $WOR2IP;
 }
 
 host $INF1 {
- hardware ethernet 52:54:00:b8:84:40;
+ hardware ethernet $INF1MAC;
  fixed-address $INF1IP;
 }
 
 host $INF2 {
- hardware ethernet 52:54:00:b8:84:40;
+ hardware ethernet $INF2MAC;
  fixed-address $INF2IP;
 }
 
@@ -370,6 +381,7 @@ websetup() {
 echo "$bld$grn Configuring Apache Web Server $nor"
 yum install -y httpd
 sed -i 's/Listen 80/Listen 0.0.0.0:8080/' /etc/httpd/conf/httpd.conf
+setsebool -P httpd_read_user_content 1
 systemctl start httpd;systemctl enable httpd;systemctl status httpd
 firewall-cmd --add-port=8080/tcp --zone=internal --permanent
 firewall-cmd --reload
@@ -508,9 +520,10 @@ cat <<EOF > /etc/exports
 /shares/registry  *(rw,sync,no_subtree_check,no_root_squash,no_all_squash,insecure,no_wdelay)
 EOF
 
+setsebool -P nfs_export_all_rw 1
+systemctl start nfs-server rpcbind nfs-mountd;systemctl enable nfs-server rpcbind;systemctl start nfs-server
 exportfs -rav
 exportfs -v
-systemctl start nfs-server rpcbind nfs-mountd;systemctl enable nfs-server rpcbind;systemctl start nfs-server
 
 firewall-cmd --zone=internal --add-service mountd --permanent
 firewall-cmd --zone=internal --add-service rpc-bind --permanent
