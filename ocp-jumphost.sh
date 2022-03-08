@@ -435,13 +435,11 @@ setsebool -P haproxy_connect_any 1
 systemctl start haproxy;systemctl enable haproxy
 
 firewall-cmd --add-port=6443/tcp --permanent
-firewall-cmd --add-port=6443/tcp --zone=external --permanent
+firewall-cmd --add-port=6443/tcp --permanent
 firewall-cmd --add-port=22623/tcp --permanent
 firewall-cmd --add-service=http --permanent
-firewall-cmd --add-service=http --zone=external --permanent
 firewall-cmd --add-service=https --permanent
-firewall-cmd --add-service=https --zone=external --permanent
-firewall-cmd --add-port=9000/tcp --zone=external --permanent
+firewall-cmd --add-port=9000/tcp --permanent
 firewall-cmd --reload
 }
 
