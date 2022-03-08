@@ -542,7 +542,7 @@ kind: VirtualMachine
 metadata:
   labels:
     kubevirt.io/vm: $N
-  name: rhcos
+  name: $N
 spec:
   running: true
   template:
@@ -657,7 +657,7 @@ kind: VirtualMachine
 metadata:
   labels:
     kubevirt.io/vm: jumphost
-  name: rhcos
+  name: jumphost
 spec:
   running: true
   template:
