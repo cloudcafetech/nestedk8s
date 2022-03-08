@@ -51,18 +51,18 @@ nor=$(tput sgr0)
 toolsetup() {
 
 echo "$bld$grn Downloading & Installing Openshift Software $nor"
-wget -q https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-install-linux.tar.gz
+curl -s -o openshift-install-linux.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-install-linux.tar.gz
 tar xpvf openshift-install-linux.tar.gz
 rm -rf openshift-install-linux.tar.gz
 mv openshift-install /usr/local/bin
 
-wget -q https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-client-linux.tar.gz
+curl -s -o openshift-client-linux.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-client-linux.tar.gz
 tar xvf openshift-client-linux.tar.gz
 rm -rf openshift-client-linux.tar.gz
 mv oc kubectl /usr/local/bin
 
-wget -q https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-live.x86_64.iso
-wget -q https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-metal.x86_64.raw.gz
+curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-live.x86_64.iso
+curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-metal.x86_64.raw.gz
 mkdir ~/ocp-install
 mv rhcos-* ~/ocp-install/
 
