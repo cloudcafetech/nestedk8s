@@ -37,8 +37,6 @@ WOR2MAC=52:54:00:b8:84:40
 INF1MAC=52:54:00:b8:84:41
 INF2MAC=52:54:00:b8:84:42
 
-
-
 PULLSECRET='{"auths":{"fake":{"auth": "bar"}}}'
 #PULLSECRET='copy-and-paste-secret-file'
 
