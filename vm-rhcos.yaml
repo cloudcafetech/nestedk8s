@@ -1,0 +1,97 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: coreos
+  name: centos
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: coreos-dv
+      annotations:
+        kubevirt.io/provisionOnNode: node
+    spec:
+      pvc:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: hostpath-storage
+      source:
+        registry:
+          url: "docker://quay.io/containerdisks/rhcos:4.9"
+          pullMethod: node # [(Not node name) node pullMode uses host cache for container images]
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: coreos
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: node
+      domain:
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: dv
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - name: default
+            bridge: {}
+          - name: eth2
+            bridge: {}
+        resources:
+          requests:
+            memory: 2G
+            cpu: "2000m"
+      networks:
+      - name: default
+        pod: {}
+      - name: eth2
+        multus:
+          networkName: default/jump-eth2
+      terminationGracePeriodSeconds: 0
+      volumes:
+      - dataVolume:
+          name: coreos-dv
+        name: dv
+      - cloudInitConfigDrive:
+          userData: |
+            {
+              "ignition": {
+                "config": {},
+                "proxy": {},
+                "security": {},
+                "timeouts": {},
+                "version": "3.2.0"
+              },
+              "passwd": {
+                "users": [
+                  {
+                    "name": "coreos",
+                    "sshAuthorizedKeys": [
+                      "ssh-rsa PUBLIC_SSH_KEY"
+                    ]
+                  }
+                ]
+              },
+              "storage": {},
+              "systemd": {
+                "units": [
+                  {
+                    "dropins": [
+                      {
+                        "contents": "[Service]\n# Override Execstart in main unit\nExecStart=\n# Add new Execstart with `-` prefix to ignore failure`\nExecStart=-/usr/sbin/agetty --autologin core --noclear %I $TERM\n",
+                        "name": "autologin-core.conf"
+                      }
+                    ],
+                    "name": "serial-getty@ttyS0.service"
+                  }
+                ]
+              }
+            }
+        name: cloudinitdisk
