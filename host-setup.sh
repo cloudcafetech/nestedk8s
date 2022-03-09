@@ -544,6 +544,23 @@ metadata:
     kubevirt.io/vm: $N
   name: $N
 spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: $N-dv
+      annotations:
+        kubevirt.io/provisionOnNode: node
+    spec:
+      pvc:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: hostpath-storage
+      source:
+        registry:
+          url: "docker://quay.io/containerdisks/rhcos:4.9"
+          pullMethod: node # [(Not node name) node pullMode uses host cache for container images]
   running: true
   template:
     metadata:
@@ -551,13 +568,13 @@ spec:
         kubevirt.io/vm: $N
     spec:
       nodeSelector:
-        kubernetes.io/hostname: node    
+        kubernetes.io/hostname: node
       domain:
         devices:
           disks:
           - disk:
               bus: virtio
-            name: containerdisk
+            name: dv
           - disk:
               bus: virtio
             name: cloudinitdisk
@@ -566,11 +583,9 @@ spec:
             bridge: {}
           - name: eth2
             bridge: {}
-        machine:
-          type: q35
         resources:
           requests:
-            memory: 4096M
+            memory: 2G
             cpu: "2000m"
       networks:
       - name: default
@@ -580,45 +595,57 @@ spec:
           networkName: default/$N-eth2
       terminationGracePeriodSeconds: 0
       volumes:
-        - containerDisk:
-            image: quay.io/containerdisks/rhcos:4.9
-          name: containerdisk
-        - cloudInitConfigDrive:
-            userData: |
-              {
-                "ignition": {
-                  "config": {},
-                  "proxy": {},
-                  "security": {},
-                  "timeouts": {},
-                  "version": "3.2.0"
-                },
-                "passwd": {
-                  "users": [
-                    {
-                      "name": "coreos",
-                      "sshAuthorizedKeys": [
-                        "ssh-rsa PUBLIC_SSH_KEY"
-                      ]
-                    }      
-                  ]
-                },
-                "storage": {},
-                "systemd": {}
+      - dataVolume:
+          name: $N-dv
+        name: dv
+      - cloudInitConfigDrive:
+          userData: |
+            {
+              "ignition": {
+                "config": {},
+                "proxy": {},
+                "security": {},
+                "timeouts": {},
+                "version": "3.2.0"
+              },
+              "passwd": {
+                "users": [
+                  {
+                    "name": "coreos",
+                    "sshAuthorizedKeys": [
+                      "ssh-rsa PUBLIC_SSH_KEY"
+                    ]
+                  }
+                ]
+              },
+              "storage": {},
+              "systemd": {
+                "units": [
+                  {
+                    "dropins": [
+                      {
+                        "contents": "[Service]\n# Override Execstart in main unit\nExecStart=\n# Add new Execstart with `-` prefix to ignore failure`\nExecStart=-/usr/sbin/agetty --autologin core --noclear %I $TERM\n",
+                        "name": "autologin-core.conf"
+                      }
+                    ],
+                    "name": "serial-getty@ttyS0.service"
+                  }
+                ]
               }
-            networkData: |
-              {
-                "version": 2,
-                "ethernets": {
-                  "enp1s0": {
-                    "dhcp4": true
-                  },
-                 "enp2s0": {
-                   "dhcp4": true
-                 }
+            }
+          networkData: |
+            {
+              "version": 2,
+              "ethernets": {
+                "enp1s0": {
+                  "dhcp4": true
+                },
+                "enp2s0": {
+                 "dhcp4": true
                 }
               }
-          name: cloudinitdisk
+            }
+        name: cloudinitdisk
 EOF
 
 sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" $N.yaml
@@ -659,8 +686,25 @@ kind: VirtualMachine
 metadata:
   labels:
     kubevirt.io/vm: jumphost
-  name: jumphost
+  name: centos
 spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: jumphost-dv
+      annotations:
+        kubevirt.io/provisionOnNode: node
+    spec:
+      pvc:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: hostpath-storage
+      source:
+        registry:
+          url: "docker://quay.io/containerdisks/centos:8.4"
+          pullMethod: node # [(Not node name) node pullMode uses host cache for container images]
   running: true
   template:
     metadata:
@@ -668,13 +712,13 @@ spec:
         kubevirt.io/vm: jumphost
     spec:
       nodeSelector:
-        kubernetes.io/hostname: node    
+        kubernetes.io/hostname: node
       domain:
         devices:
           disks:
           - disk:
               bus: virtio
-            name: containerdisk
+            name: dv
           - disk:
               bus: virtio
             name: cloudinitdisk
@@ -683,11 +727,9 @@ spec:
             bridge: {}
           - name: eth2
             bridge: {}
-        machine:
-          type: q35
         resources:
           requests:
-            memory: 4096M
+            memory: 2G
             cpu: "2000m"
       networks:
       - name: default
@@ -697,9 +739,9 @@ spec:
           networkName: default/jump-eth2
       terminationGracePeriodSeconds: 0
       volumes:
-      - containerDisk:
-          image: quay.io/containerdisks/centos:8.4
-        name: containerdisk
+      - dataVolume:
+          name: jumphost-dv
+        name: dv
       - cloudInitNoCloud:
           networkData: |
             version: 2
@@ -707,7 +749,7 @@ spec:
               eth0:
                 dhcp4: true
               eth1:
-                dhcp4: true      
+                dhcp4: true
           userData: |
             #cloud-config
             hostname: jumphost
@@ -721,7 +763,8 @@ spec:
             runcmd:
               - cd /etc/yum.repos.d/
               - sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
-              - sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*            
+              - sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* 
+              - yum install wget -y
         name: cloudinitdisk
 EOF
 
