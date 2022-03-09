@@ -1,0 +1,76 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: test-ign
+  name: test-ign
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: rhcos-dv
+    spec:
+      pvc:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: local
+      source:
+        registry:
+          url: "docker://quay.io/containerdisks/rhcos:4.9"
+          pullMethod: node # Using the node pullMode uses the host cache for the container images
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: test-ign
+    spec:
+      domain:
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: dv
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+        resources:
+          requests:
+            memory: 2G
+            cpu: "2000m"
+      volumes:
+        - dataVolume:
+            name: rhcos-dv
+          name: dv
+        - cloudInitConfigDrive:
+            userData: |
+              {
+                "ignition": {
+                  "version": "3.3.0"
+                },
+                "passwd": {
+                  "users": [
+                    {
+                      "name": "core",
+                      "sshAuthorizedKeys": [
+                        "ssh-rsa AA..."
+                      ]
+                    }
+                  ]
+                },
+                "systemd": {
+                  "units": [
+                    {
+                      "dropins": [
+                        {
+                          "contents": "[Service]\n# Override Execstart in main unit\nExecStart=\n# Add new Execstart with `-` prefix to ignore failure`\nExecStart=-/usr/sbin/agetty --autologin core --noclear %I $TERM\n",
+                          "name": "autologin-core.conf"
+                        }
+                      ],
+                      "name": "serial-getty@ttyS0.service"
+                    }
+                  ]
+                }
+              }
+          name: cloudinitdisk
