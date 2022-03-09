@@ -2,12 +2,14 @@ apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
   labels:
-    kubevirt.io/vm: test-ign
-  name: test-ign
+    kubevirt.io/vm: centos
+  name: centos
 spec:
   dataVolumeTemplates:
   - metadata:
-      name: rhcos-dv
+      name: centos-dv
+      annotations:
+        kubevirt.io/provisionOnNode: kubevirt-control-plane
     spec:
       pvc:
         accessModes:
@@ -15,16 +17,16 @@ spec:
         resources:
           requests:
             storage: 20Gi
-        storageClassName: local
+        storageClassName: hostpath-storage
       source:
         registry:
-          url: "docker://quay.io/containerdisks/rhcos:4.9"
+          url: "docker://quay.io/containerdisks/centos:8.4"
           pullMethod: node # Using the node pullMode uses the host cache for the container images
   running: true
   template:
     metadata:
       labels:
-        kubevirt.io/vm: test-ign
+        kubevirt.io/vm: centos
     spec:
       domain:
         devices:
@@ -40,37 +42,30 @@ spec:
             memory: 2G
             cpu: "2000m"
       volumes:
-        - dataVolume:
-            name: rhcos-dv
-          name: dv
-        - cloudInitConfigDrive:
-            userData: |
-              {
-                "ignition": {
-                  "version": "3.3.0"
-                },
-                "passwd": {
-                  "users": [
-                    {
-                      "name": "core",
-                      "sshAuthorizedKeys": [
-                        "ssh-rsa AA..."
-                      ]
-                    }
-                  ]
-                },
-                "systemd": {
-                  "units": [
-                    {
-                      "dropins": [
-                        {
-                          "contents": "[Service]\n# Override Execstart in main unit\nExecStart=\n# Add new Execstart with `-` prefix to ignore failure`\nExecStart=-/usr/sbin/agetty --autologin core --noclear %I $TERM\n",
-                          "name": "autologin-core.conf"
-                        }
-                      ],
-                      "name": "serial-getty@ttyS0.service"
-                    }
-                  ]
-                }
-              }
-          name: cloudinitdisk
+      - dataVolume:
+          name: centos-dv
+        name: dv
+      - cloudInitNoCloud:
+          networkData: |
+            version: 2
+            ethernets:
+              eth0:
+                dhcp4: true
+              eth1:
+                dhcp4: true
+          userData: |
+            #cloud-config
+            hostname: centos
+            user: root
+            password: passwd
+            chpasswd: { expire: False }
+            ssh_pwauth: True
+            disable_root: false
+            ssh_authorized_keys:
+            - ssh-rsa PUBLIC_SSH_KEY
+            runcmd:
+              - cd /etc/yum.repos.d/
+              - sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+              - sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* 
+              - yum install wget -y
+        name: cloudinitdisk
