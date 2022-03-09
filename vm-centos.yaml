@@ -21,7 +21,7 @@ spec:
       source:
         registry:
           url: "docker://quay.io/containerdisks/centos:8.4"
-          pullMethod: node # Using the node pullMode uses the host cache for the container images
+          pullMethod: node # [(Not node name) node pullMode uses host cache for container images]
   running: true
   template:
     metadata:
