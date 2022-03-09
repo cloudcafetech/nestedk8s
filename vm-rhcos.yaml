@@ -3,13 +3,13 @@ kind: VirtualMachine
 metadata:
   labels:
     kubevirt.io/vm: coreos
-  name: centos
+  name: coreos
 spec:
   dataVolumeTemplates:
   - metadata:
       name: coreos-dv
       annotations:
-        kubevirt.io/provisionOnNode: node
+        kubevirt.io/provisionOnNode: kubevirt-control-plane
     spec:
       pvc:
         accessModes:
@@ -29,7 +29,7 @@ spec:
         kubevirt.io/vm: coreos
     spec:
       nodeSelector:
-        kubernetes.io/hostname: node
+        kubernetes.io/hostname: kubevirt-control-plane
       domain:
         devices:
           disks:
@@ -42,8 +42,6 @@ spec:
           interfaces:
           - name: default
             bridge: {}
-          - name: eth2
-            bridge: {}
         resources:
           requests:
             memory: 2G
@@ -51,9 +49,6 @@ spec:
       networks:
       - name: default
         pod: {}
-      - name: eth2
-        multus:
-          networkName: default/jump-eth2
       terminationGracePeriodSeconds: 0
       volumes:
       - dataVolume:
@@ -105,5 +100,5 @@ spec:
                  "dhcp4": true
                 }
               }
-            }            
+            }
         name: cloudinitdisk
