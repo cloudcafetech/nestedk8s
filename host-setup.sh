@@ -772,7 +772,8 @@ if [[ "$master" == "node" ]]; then
   while ! echo break | nc $KUBEMASTER 6443 &> /dev/null; do printf '.'; sleep 2; done
   kubeadm join --discovery-token-unsafe-skip-ca-verification --token=$TOKEN $KUBEMASTER:6443
   docker pull quay.io/containerdisks/centos:8.4
-  docker pull quay.io/containerdisks/rhcos:4.9  
+  docker pull quay.io/containerdisks/rhcos:4.9
+  docker pull tedezed/ubuntu-container-disk:20.0
   exit
 fi
 
