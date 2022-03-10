@@ -370,6 +370,9 @@ wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/rke2-clus
 wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/k3s-cluster.sh
 chmod +x *-cluster.sh
 
+docker pull quay.io/containerdisks/centos:8.4
+docker pull tedezed/ubuntu-container-disk:20.0
+
 }
 #-------------------------------------------------------#
 
