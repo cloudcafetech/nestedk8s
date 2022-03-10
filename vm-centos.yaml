@@ -41,6 +41,12 @@ spec:
           requests:
             memory: 2G
             cpu: "2000m"
+          interfaces:
+          - name: default
+            bridge: {}            
+      networks:
+      - name: default
+        pod: {}            
       volumes:
       - dataVolume:
           name: centos-dv
