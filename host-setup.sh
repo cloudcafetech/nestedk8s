@@ -176,13 +176,210 @@ echo $PUBKEY
 }
 #-------------------------------------------------------#
 
-####### K8S VM Preparation Function ##############
-k8svmprep() {
+####### K8S Ubuntu VM Preparation Function ##############
+k8suvmprep() {
 
 NODE1=master
 NODE2=worker
-CTX1=k8s
-CTX2=k3s
+CTX1=k8su
+CTX2=k3su
+
+for C in $CTX1 $CTX2
+do
+# PVC & VM yaml generate
+for N in $NODE1 $NODE2
+do
+cat <<EOF > $C-$N-eth2.yaml
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: $C-$N-eth2
+spec:
+  config: >
+    {
+        "cniVersion": "0.3.1",
+        "name": "$C-$N-eth2",
+        "plugins": [{
+            "type": "bridge",
+            "bridge": "eth2",
+            "vlan": 1234,
+            "ipam": {
+              "type": "static",
+                "addresses": [
+                  {
+                    "address": "10.244.1.10/24"
+                  }
+                ]
+            }
+        }]
+    }
+EOF
+
+cat <<EOF > $C-$N.yaml
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: $C-$N
+  name: $C-$N
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: $C-$N-data-volume
+      annotations:
+        kubevirt.io/provisionOnNode: node
+    spec:
+      pvc:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: hostpath-storage
+      source:
+        registry:
+          url: "docker://tedezed/ubuntu-container-disk:20.0"
+          pullMethod: node # [(Not node name) node pullMode uses host cache for container images]
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: $C-$N
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: node
+      domain:
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: dv
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - name: default
+            bridge: {}
+          - name: eth2
+            bridge: {}
+        resources:
+          requests:
+            memory: 2G
+            cpu: "2000m"            
+      networks:
+      - name: default
+        pod: {}
+      - name: eth2
+        multus:
+          networkName: default/$C-$N-eth2
+      volumes:
+      - name: dv
+        dataVolume:
+          name: $C-$N-data-volume
+      - cloudInitNoCloud:
+          networkData: |
+            version: 2
+            ethernets:
+              enp2s0:
+                dhcp4: true
+              enp2s0:
+                dhcp4: true      
+          userData: |
+            #cloud-config
+            hostname: $C-$N
+            user: root
+            password: passwd
+            chpasswd: { expire: False }
+            ssh_pwauth: True
+            disable_root: false
+            ssh_authorized_keys:
+            - ssh-rsa PUBLIC_SSH_KEY
+            runcmd:
+              - apt-get update
+        name: cloudinitdisk
+EOF
+
+sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" $C-$N.yaml
+done
+done
+
+# Alterin IPS & Deploy
+
+sed -i "s/10.244.1.10/10.244.1.10/g" $CTX1-$NODE1-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.11/g" $CTX1-$NODE2-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.20/g" $CTX2-$NODE1-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.21/g" $CTX2-$NODE2-eth2.yaml
+
+kubectl create -f $CTX1-$NODE1-eth2.yaml
+kubectl create -f $CTX1-$NODE2-eth2.yaml
+kubectl create -f $CTX2-$NODE1-eth2.yaml
+kubectl create -f $CTX2-$NODE2-eth2.yaml
+
+# Service for VMS
+
+cat <<EOF > $CTX1-svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: $CTX1-svc
+spec:
+  externalTrafficPolicy: Cluster
+  type: NodePort
+  selector:
+    kubevirt.io/domain: $CTX1-$NODE1
+  ports:
+  - name: http
+    nodePort: 30080
+    port: 27018
+    protocol: TCP
+    targetPort: 80
+  - name: https
+    nodePort: 30043
+    port: 27019
+    protocol: TCP
+    targetPort: 443
+EOF
+cat <<EOF > $CTX2-svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: $CTX2-svc
+spec:
+  externalTrafficPolicy: Cluster
+  type: NodePort
+  selector:
+    kubevirt.io/domain: $CTX2-$NODE2
+  ports:
+  - name: http
+    nodePort: 31080
+    port: 28018
+    protocol: TCP
+    targetPort: 80
+  - name: https
+    nodePort: 31043
+    port: 28019
+    protocol: TCP
+    targetPort: 443
+EOF
+
+# Cluster create script
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/rke2-cluster.sh
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/k3s-cluster.sh
+chmod +x *-cluster.sh
+
+docker pull quay.io/containerdisks/centos:8.4
+docker pull tedezed/ubuntu-container-disk:20.0
+
+}
+#-------------------------------------------------------#
+
+####### K8S CentOS VM Preparation Function ##############
+k8scvmprep() {
+
+NODE1=master
+NODE2=worker
+CTX1=k8sc
+CTX2=k3sc
 
 for C in $CTX1 $CTX2
 do
@@ -839,6 +1036,7 @@ sed -i "s/3.16.154.209/$PUBIP/g" wordpress.yaml
 kvsetup
 
 # VM Preparation YAML
-#k8svmprep
+#k8suvmprep
+#k8scvmprep
 #winvmprep
 ocpvmprep
