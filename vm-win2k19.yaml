@@ -40,8 +40,6 @@ spec:
         kubevirt.io/domain: win2k19
     spec:
       domain:
-        cpu:
-          cores: 4
         devices:
           disks:
           - bootOrder: 1
@@ -59,6 +57,7 @@ spec:
         resources:
           requests:
             memory: 8G
+            cpu: "2000m"            
       volumes:
       - name: cdromiso
         persistentVolumeClaim:
