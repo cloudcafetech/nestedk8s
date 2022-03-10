@@ -1,0 +1,76 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: ubuntu
+  name: ubuntu
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: ubuntu-dv
+      annotations:
+        kubevirt.io/provisionOnNode: kubevirt-control-plane
+    spec:
+      pvc:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: hostpath-storage
+      source:
+        registry:
+          url: "docker://tedezed/ubuntu-container-disk:20.0"
+          pullMethod: node # [(Not node name) node pullMode uses host cache for container images]
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: ubuntu
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: kubevirt-control-plane
+      domain:
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: dv
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - name: default
+            bridge: {}
+        resources:
+          requests:
+            memory: 2G
+            cpu: "2000m"
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - dataVolume:
+          name: ubuntu-dv
+        name: dv
+      - cloudInitNoCloud:
+          networkData: |
+            version: 2
+            ethernets:
+              enp1s0:
+                dhcp4: true
+              enp2s0:
+                dhcp4: true
+          userData: |
+            #cloud-config
+            hostname: ubuntu
+            user: root
+            password: passwd
+            chpasswd: { expire: False }
+            ssh_pwauth: True
+            disable_root: false
+            ssh_authorized_keys:
+            - ssh-rsa PUBLIC_SSH_KEY
+            runcmd:
+              - apt-get update
+        name: cloudinitdisk
