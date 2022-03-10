@@ -176,7 +176,7 @@ echo $PUBKEY
 }
 #-------------------------------------------------------#
 
-####### VM Preparation Function ##############
+####### K8S VM Preparation Function ##############
 k8svmprep() {
 
 NODE1=master
@@ -189,27 +189,6 @@ do
 # PVC & VM yaml generate
 for N in $NODE1 $NODE2
 do
-cat <<EOF > $C-$N-pvc.yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: "$C-$N-data-volume"
-  labels:
-    app: containerized-data-importer
-  annotations:
-    #cdi.kubevirt.io/storage.import.endpoint: "https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.3.2011-20201204.2.x86_64.qcow2"
-    #cdi.kubevirt.io/storage.import.endpoint: "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-metal.x86_64.raw.gz"
-    #cdi.kubevirt.io/storage.import.endpoint: "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
-    cdi.kubevirt.io/storage.import.endpoint: "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img"
-    kubevirt.io/provisionOnNode: node
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 15Gi
-EOF
-
 cat <<EOF > $C-$N-eth2.yaml
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
@@ -241,35 +220,51 @@ apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
   labels:
-    kubevirt.io/os: linux
+    kubevirt.io/vm: $C-$N
   name: $C-$N
 spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: $C-$N-data-volume
+      annotations:
+        kubevirt.io/provisionOnNode: node
+    spec:
+      pvc:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: hostpath-storage
+      source:
+        registry:
+          url: "docker://quay.io/containerdisks/centos:8.4"
+          pullMethod: node # [(Not node name) node pullMode uses host cache for container images]
   running: true
   template:
     metadata:
       labels:
-        kubevirt.io/domain: $C-$N
+        kubevirt.io/vm: $C-$N
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: node
       domain:
         devices:
           disks:
           - disk:
               bus: virtio
-            name: disk0
-          - cdrom:
-              bus: sata
-              readonly: true
+            name: dv
+          - disk:
+              bus: virtio
             name: cloudinitdisk
           interfaces:
           - name: default
             bridge: {}
           - name: eth2
             bridge: {}
-        machine:
-          type: q35
         resources:
           requests:
-            memory: 4096M
+            memory: 2G
             cpu: "2000m"            
       networks:
       - name: default
@@ -278,16 +273,16 @@ spec:
         multus:
           networkName: default/$C-$N-eth2
       volumes:
-      - name: disk0
-        persistentVolumeClaim:
-          claimName: $C-$N-data-volume
+      - name: dv
+        dataVolume:
+          name: $C-$N-data-volume
       - cloudInitNoCloud:
           networkData: |
             version: 2
             ethernets:
-              enp1s0:
+              eth0:
                 dhcp4: true
-              enp2s0:
+              eth1:
                 dhcp4: true      
           userData: |
             #cloud-config
@@ -299,6 +294,11 @@ spec:
             disable_root: false
             ssh_authorized_keys:
             - ssh-rsa PUBLIC_SSH_KEY
+            runcmd:
+              - cd /etc/yum.repos.d/
+              - sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+              - sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* 
+              - yum install wget -y
         name: cloudinitdisk
 EOF
 
@@ -365,72 +365,53 @@ spec:
     targetPort: 443
 EOF
 
-# Windows VM yaml preparation
+# Cluster create script
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/rke2-cluster.sh
+wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/k3s-cluster.sh
+chmod +x *-cluster.sh
 
-cat <<EOF > win-vm-pvc.yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  labels:
-    app: containerized-data-importer
-  annotations:
-    #cdi.kubevirt.io/storage.import.endpoint: "http://download.microsoft.com/download/6/2/A/62A76ABB-9990-4EFC-A4FE-C7D698DAEB96/9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO"
-    cdi.kubevirt.io/storage.import.endpoint: "https://software-download.microsoft.com/download/pr/17763.737.190906-2324.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us_1.iso"
-    kubevirt.io/provisionOnNode: node
-  name: win2k19
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 7G
-  storageClassName: hostpath-storage
-  volumeMode: Filesystem
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: winhd
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 15Gi
-  storageClassName: hostpath-storage
-  volumeName: pvc-winhd
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: pvc-winhd
-spec:
-  accessModes:
-  - ReadWriteOnce
-  capacity:
-    storage: 48Gi
-  hostPath:
-    path: /var/hpvolumes/winhd
-    type: ""
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-      - matchExpressions:
-        - key: kubernetes.io/hostname
-          operator: In
-          values:
-          - node
-  persistentVolumeReclaimPolicy: Delete
-  storageClassName: hostpath-storage
-  volumeMode: Filesystem
-EOF
+}
+#-------------------------------------------------------#
+
+####### Windows VM Preparation Function ##############
+winvmprep() {
 
 cat <<EOF > win-vm.yaml
-apiVersion: kubevirt.io/v1alpha3
+apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
   name: win2k19
 spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: win2k19
+      annotations:
+        kubevirt.io/provisionOnNode: node
+    spec:
+      pvc:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: hostpath-storage
+      source:
+        http:
+          url: "https://software-download.microsoft.com/download/pr/17763.737.190906-2324.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us_1.iso"
+  - metadata:
+      name: winhd
+      annotations:
+        kubevirt.io/provisionOnNode: node
+    spec:
+      pvc:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: hostpath-storage
+      source:
+        blank: {}
   running: false
   template:
     metadata:
@@ -484,11 +465,6 @@ spec:
     kubevirt.io/domain: win2k19
   type: NodePort
 EOF
-
-# Cluster create script
-wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/rke2-cluster.sh
-wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/k3s-cluster.sh
-chmod +x *-cluster.sh
 
 }
 #-------------------------------------------------------#
@@ -860,4 +836,5 @@ kvsetup
 
 # VM Preparation YAML
 #k8svmprep
+#winvmprep
 ocpvmprep
