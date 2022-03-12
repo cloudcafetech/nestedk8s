@@ -63,8 +63,6 @@ mv oc kubectl /usr/local/bin
 
 curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-live.x86_64.iso
 curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-metal.x86_64.raw.gz
-mkdir ~/ocp-install
-mv rhcos-* ~/ocp-install/
 
 }
 
@@ -477,6 +475,11 @@ ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1
 PUBKEY=`cat ~/.ssh/id_rsa.pub`
 echo $PUBKEY
 
+rm -rf /var/www/html/ocp4
+rm -rf ~/ocp-install
+mkdir /var/www/html/ocp4
+mkdir ~/ocp-install
+
 cat <<EOF > ~/ocp-install/install-config.yaml
 apiVersion: v1
 baseDomain: $DOMAIN
@@ -511,14 +514,13 @@ sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" ~/ocp-install/install-config.yaml
 cp ~/ocp-install/install-config.yaml ~/ocp-install/install-config.yaml-bak
 cp ~/ocp-install/install-config.yaml install-config.yaml
 
-mkdir /var/www/html/ocp4
-mv ~/ocp-install/rhcos-metal.x86_64.raw.gz /var/www/html/ocp4/rhcos
+cp rhcos-live.x86_64.iso /var/www/html/ocp4/rhcos-live.x86_64.iso
+cp rhcos-metal.x86_64.raw.gz /var/www/html/ocp4/rhcos
 
 openshift-install create manifests --dir ~/ocp-install/
 sed -i 's/mastersSchedulable: true/mastersSchedulable: false/' ~/ocp-install/manifests/cluster-scheduler-02-config.yml
-cp -R ~/ocp-install/* /var/www/html/ocp4
 openshift-install create ignition-configs --dir ~/ocp-install/
-cp -R ~/ocp-install/* /var/www/html/ocp4
+cp -R ~/ocp-install/*.ign /var/www/html/ocp4
 
 chcon -R -t httpd_sys_content_t /var/www/html/ocp4/
 chown -R apache: /var/www/html/ocp4/
