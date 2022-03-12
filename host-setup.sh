@@ -280,7 +280,7 @@ spec:
           networkData: |
             version: 2
             ethernets:
-              enp2s0:
+              enp1s0:
                 dhcp4: true
               enp2s0:
                 dhcp4: true      
