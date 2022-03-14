@@ -125,7 +125,7 @@ else
  yum install -y kubelet-$K8S_VER kubeadm-$K8S_VER kubectl-$K8S_VER --disableexcludes=kubernetes
 fi
 
-# After installing crio and our kubernetes tools, we’ll need to enable the services so that they persist across reboots, and start the services so we can use them right away.
+# After installing crio and our kubernetes tools, we’ll need to enable the services so that they persist across reboots.
 systemctl enable --now kubelet; systemctl start kubelet; systemctl status kubelet
 
 }
@@ -672,6 +672,7 @@ EOF
 ####### OCP VM Preparation Function ##############
 ocpvmprep() {
 
+DOMAIN=cloudcafe.in
 BOOT=bootstrap
 MAS1=ocpmaster1
 MAS2=ocpmaster2
@@ -743,6 +744,19 @@ spec:
       labels:
         kubevirt.io/vm: $N
     spec:
+      dnsConfig:
+        nameservers:
+        - 10.244.0.215
+        - 10.96.0.10
+        - 8.8.8.8
+        - 8.8.4.4
+        searches:
+        - $DOMAIN
+        - default.svc.cluster.local
+        - svc.cluster.local
+        - cluster.local
+      hostname: $N
+      dnsPolicy: None
       nodeSelector:
         kubernetes.io/hostname: node
       domain:
@@ -862,7 +876,7 @@ kind: VirtualMachine
 metadata:
   labels:
     kubevirt.io/vm: jumphost
-  name: centos
+  name: jumphost
 spec:
   dataVolumeTemplates:
   - metadata:
@@ -887,6 +901,19 @@ spec:
       labels:
         kubevirt.io/vm: jumphost
     spec:
+      dnsConfig:
+        nameservers:
+        - 10.244.0.215
+        - 10.96.0.10
+        - 8.8.8.8
+        - 8.8.4.4
+        searches:
+        - $DOMAIN
+        - default.svc.cluster.local
+        - svc.cluster.local
+        - cluster.local
+      hostname: jumphost
+      dnsPolicy: None
       nodeSelector:
         kubernetes.io/hostname: node
       domain:
