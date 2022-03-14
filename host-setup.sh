@@ -733,7 +733,7 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            storage: 20Gi
+            storage: 100Gi
         storageClassName: hostpath-storage
       source:
         registry:
@@ -775,8 +775,8 @@ spec:
             bridge: {}
         resources:
           requests:
-            memory: 2G
-            cpu: "2000m"
+            memory: 16G
+            cpu: "8000m"
       networks:
       - name: default
         pod: {}
@@ -889,7 +889,7 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            storage: 20Gi
+            storage: 40Gi
         storageClassName: hostpath-storage
       source:
         registry:
@@ -931,8 +931,8 @@ spec:
             bridge: {}
         resources:
           requests:
-            memory: 2G
-            cpu: "2000m"
+            memory: 8G
+            cpu: "4000m"
       networks:
       - name: default
         pod: {}
