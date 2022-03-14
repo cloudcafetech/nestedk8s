@@ -749,7 +749,6 @@ spec:
         - 10.244.1.215
         - 10.96.0.10
         - 8.8.8.8
-        - 8.8.4.4
         searches:
         - $DOMAIN
         - default.svc.cluster.local
@@ -906,7 +905,6 @@ spec:
         - 10.244.1.215
         - 10.96.0.10
         - 8.8.8.8
-        - 8.8.4.4
         searches:
         - $DOMAIN
         - default.svc.cluster.local
