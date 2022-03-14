@@ -683,6 +683,7 @@ INF1=ocpinfra1
 INF2=ocpinfra2
 JUMP=jumphost
 
+AUTOLOGIN='"contents": "[Service]\n# Override Execstart in main unit\nExecStart=\n# Add new Execstart with `-` prefix to ignore failure`\nExecStart=-/usr/sbin/agetty --autologin core --noclear %I $TERM\n",'
 # VM yaml generate
 i=16
 for N in $BOOT $MAS1 $MAS2 $MAS3 $WOR1 $WOR2 $INF1 $INF2 
@@ -813,7 +814,7 @@ spec:
                   {
                     "dropins": [
                       {
-                        "contents": "[Service]\n# Override Execstart in main unit\nExecStart=\n# Add new Execstart with `-` prefix to ignore failure`\nExecStart=-/usr/sbin/agetty --autologin core --noclear %I $TERM\n",
+                        $AUTOLOGIN
                         "name": "autologin-core.conf"
                       }
                     ],
