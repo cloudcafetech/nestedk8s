@@ -714,6 +714,84 @@ spec:
     }
 EOF
 
+cat <<EOF > $N-dv.yaml
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: $N-dv
+  annotations:
+    kubevirt.io/provisionOnNode: node
+spec:
+  source:
+      blank: {}
+  pvc:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 80Gi
+EOF
+
+cat <<EOF > temp-$N-vm.yaml
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: temp-$N-vm 
+  name: temp-$N-vm
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: temp-$N-vm
+    spec:
+      domain:
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: installer
+          - disk:
+              bus: virtio
+            name: target-dv
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+        resources:
+          requests:
+            memory: 2G
+            cpu: "2000m"
+      volumes:
+        - containerDisk:
+            image: quay.io/containerdisks/rhcos:4.9
+          name: installer
+        - dataVolume:
+            name: $N-dv
+          name: target-dv
+        - cloudInitConfigDrive:
+            userData: |
+              {
+                "ignition": {
+                  "version": "3.3.0"
+                },
+                "systemd": {
+                  "units": [
+                    {
+                      "dropins": [
+                        {
+                          $AUTOLOGIN
+                          "name": "autologin-core.conf"
+                        }
+                      ],
+                      "name": "serial-getty@ttyS0.service"
+                    }
+                  ]
+                }
+              }
+          name: cloudinitdisk
+EOF
+
 cat <<EOF > $N.yaml
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
@@ -722,23 +800,6 @@ metadata:
     kubevirt.io/vm: $N
   name: $N
 spec:
-  dataVolumeTemplates:
-  - metadata:
-      name: $N-dv
-      annotations:
-        kubevirt.io/provisionOnNode: node
-    spec:
-      pvc:
-        accessModes:
-        - ReadWriteOnce
-        resources:
-          requests:
-            storage: 100Gi
-        storageClassName: hostpath-storage
-      source:
-        http:
-          #url: "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/rhcos-live.x86_64.iso"
-          url: "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.9/latest/rhcos-live.x86_64.iso"
   running: true
   template:
     metadata:
@@ -751,7 +812,7 @@ spec:
         - 10.96.0.10
         - 8.8.8.8
         searches:
-        - $DOMAIN
+        - cloudcafe.in
         - default.svc.cluster.local
         - svc.cluster.local
         - cluster.local
@@ -765,9 +826,6 @@ spec:
           - disk:
               bus: virtio
             name: dv
-          - disk:
-              bus: virtio
-            name: cloudinitdisk
           interfaces:
           - name: default
             bridge: {}
@@ -775,36 +833,21 @@ spec:
             bridge: {}
         resources:
           requests:
-            memory: 16G
-            cpu: "8000m"
+            memory: 8G
+            cpu: "4000m"
       networks:
       - name: default
         pod: {}
       - name: eth2
         multus:
           networkName: default/$N-eth2
-      terminationGracePeriodSeconds: 0
       volumes:
-      - dataVolume:
-          name: $N-dv
-        name: dv
-      - cloudInitConfigDrive:
-          networkData: |
-            {
-              "version": 2,
-              "ethernets": {
-                "enp1s0": {
-                  "dhcp4": true
-                },
-                "enp2s0": {
-                 "dhcp4": true
-                }
-              }
-            }
-        name: cloudinitdisk
+        - dataVolume:
+            name: $N-dv
+          name: dv
 EOF
 
-sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" $N.yaml
+#sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" $N.yaml
 i=`expr $i + 1`
 
 kubectl create -f $N-eth2.yaml
