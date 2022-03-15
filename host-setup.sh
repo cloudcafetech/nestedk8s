@@ -812,7 +812,7 @@ spec:
         - 10.96.0.10
         - 8.8.8.8
         searches:
-        - cloudcafe.in
+        - $DOMAIN
         - default.svc.cluster.local
         - svc.cluster.local
         - cluster.local
