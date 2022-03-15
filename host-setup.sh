@@ -736,9 +736,9 @@ spec:
             storage: 100Gi
         storageClassName: hostpath-storage
       source:
-        registry:
-          url: "docker://quay.io/containerdisks/rhcos:4.9"
-          pullMethod: node # [(Not node name) node pullMode uses host cache for container images]
+        http:
+          #url: "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/rhcos-live.x86_64.iso"
+          url: "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.9/latest/rhcos-live.x86_64.iso"
   running: true
   template:
     metadata:
@@ -789,40 +789,6 @@ spec:
           name: $N-dv
         name: dv
       - cloudInitConfigDrive:
-          userData: |
-            {
-              "ignition": {
-                "config": {},
-                "proxy": {},
-                "security": {},
-                "timeouts": {},
-                "version": "3.2.0"
-              },
-              "passwd": {
-                "users": [
-                  {
-                    "name": "coreos",
-                    "sshAuthorizedKeys": [
-                      "ssh-rsa PUBLIC_SSH_KEY"
-                    ]
-                  }
-                ]
-              },
-              "storage": {},
-              "systemd": {
-                "units": [
-                  {
-                    "dropins": [
-                      {
-                        $AUTOLOGIN
-                        "name": "autologin-core.conf"
-                      }
-                    ],
-                    "name": "serial-getty@ttyS0.service"
-                  }
-                ]
-              }
-            }
           networkData: |
             {
               "version": 2,
