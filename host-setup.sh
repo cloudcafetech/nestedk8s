@@ -758,10 +758,21 @@ spec:
           - disk:
               bus: virtio
             name: cloudinitdisk
+          interfaces:
+          - name: default
+            bridge: {}
+          - name: eth2
+            bridge: {}
         resources:
           requests:
             memory: 2G
             cpu: "2000m"
+      networks:
+      - name: default
+        pod: {}
+      - name: eth2
+        multus:
+          networkName: default/$N-eth2
       volumes:
         - containerDisk:
             image: quay.io/containerdisks/rhcos:4.9
@@ -787,6 +798,18 @@ spec:
                       "name": "serial-getty@ttyS0.service"
                     }
                   ]
+                }
+              }
+            networkData: |
+              {
+                "version": 2,
+                "ethernets": {
+                  "enp1s0": {
+                    "dhcp4": true
+                  },
+                  "enp2s0": {
+                   "dhcp4": true
+                  }
                 }
               }
           name: cloudinitdisk
@@ -826,6 +849,9 @@ spec:
           - disk:
               bus: virtio
             name: dv
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
           interfaces:
           - name: default
             bridge: {}
@@ -845,6 +871,20 @@ spec:
         - dataVolume:
             name: $N-dv
           name: dv
+        - cloudInitConfigDrive:
+            networkData: |
+              {
+                "version": 2,
+                "ethernets": {
+                  "enp1s0": {
+                    "dhcp4": true
+                  },
+                  "enp2s0": {
+                   "dhcp4": true
+                  }
+                }
+              }
+          name: cloudinitdisk
 EOF
 
 #sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" $N.yaml
