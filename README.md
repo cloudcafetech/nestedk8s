@@ -7,6 +7,16 @@ Using KubeVirt to create a Kubernetes Cluster within a Kubernetes Cluster (Neste
   <img src="https://github.com/cloudcafetech/nestedk8s/blob/main/kik.PNG">
 </p>
 
+## Nested Kubernetes Architecture
+
+Base K8S Cluster build using kubeadm with Flannel along with Multus NW on AWS EC2 and Persistent Storatge (kubevirt.io/hostpath-provisioner)
+
+- Master (t2.medium) Ubuntu 18.4
+- Node (c5.metal) Ubuntu 18.4, where all Kubevirt VMs deployed.
+
+     - 6 Kubevirt VMs (Bootstrap, Master1, Master2, Master3, Worker1 & Worker2) using RHOCS image (quay.io/containerdisks/rhcos:4.9) using CDI.
+     - 1 Kubevirt VMs (Jumhost) using CentOS image (quay.io/containerdisks/centos:8.4) using CDI, this jumphost used for (DNS, DHCP, HAPROXY, Webserver)
+
 ### Install K8S Cluster or use [Katakoda](https://www.katacoda.com/kubevirt/scenarios/kubevirt-cdi)
 
 - Master (Bare Metal)
