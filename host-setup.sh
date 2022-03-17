@@ -1021,11 +1021,12 @@ EOF
 
 sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" jump.yaml
 kubectl create -f jump-eth2.yaml
-}
 
 wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/ocp-jumphost.sh
 docker pull quay.io/containerdisks/centos:8.4
 docker pull quay.io/containerdisks/rhcos:4.9
+
+}
 
 #-------------------------------------------------------#
 
