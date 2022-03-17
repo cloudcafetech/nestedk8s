@@ -305,10 +305,10 @@ done
 
 # Alterin IPS & Deploy
 
-sed -i "s/10.244.1.10/10.244.1.10/g" $CTX1-$NODE1-eth2.yaml
-sed -i "s/10.244.1.10/10.244.1.11/g" $CTX1-$NODE2-eth2.yaml
-sed -i "s/10.244.1.10/10.244.1.20/g" $CTX2-$NODE1-eth2.yaml
-sed -i "s/10.244.1.10/10.244.1.21/g" $CTX2-$NODE2-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.205/g" $CTX1-$NODE1-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.206/g" $CTX1-$NODE2-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.207/g" $CTX2-$NODE1-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.208/g" $CTX2-$NODE2-eth2.yaml
 
 kubectl create -f $CTX1-$NODE1-eth2.yaml
 kubectl create -f $CTX1-$NODE2-eth2.yaml
@@ -503,12 +503,12 @@ sed -i "s%ssh-rsa PUBLIC_SSH_KEY%$PUBKEY%" $C-$N.yaml
 done
 done
 
-# Alterin IPS & Deploy
+# Altering IPS & Deploy
 
-sed -i "s/10.244.1.10/10.244.1.10/g" $CTX1-$NODE1-eth2.yaml
-sed -i "s/10.244.1.10/10.244.1.11/g" $CTX1-$NODE2-eth2.yaml
-sed -i "s/10.244.1.10/10.244.1.20/g" $CTX2-$NODE1-eth2.yaml
-sed -i "s/10.244.1.10/10.244.1.21/g" $CTX2-$NODE2-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.210/g" $CTX1-$NODE1-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.211/g" $CTX1-$NODE2-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.212/g" $CTX2-$NODE1-eth2.yaml
+sed -i "s/10.244.1.10/10.244.1.213/g" $CTX2-$NODE2-eth2.yaml
 
 kubectl create -f $CTX1-$NODE1-eth2.yaml
 kubectl create -f $CTX1-$NODE2-eth2.yaml
