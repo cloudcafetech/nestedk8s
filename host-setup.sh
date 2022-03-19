@@ -1107,6 +1107,17 @@ wget -q https://raw.githubusercontent.com/cloudcafetech/nestedk8s/main/wordpress
 sed -i "s/3.16.154.209/$PUBIP/g" employee.yaml
 sed -i "s/3.16.154.209/$PUBIP/g" wordpress.yaml
 
+# Rancher Setup
+helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+kubectl create namespace cattle-system
+
+helm install rancher rancher-stable/rancher \
+  --namespace cattle-system \
+  --set hostname=rancher.$PUBIP.nip.io \
+  --set replicas=2 \
+  --version 2.6.3 \
+  --set ingress.tls.source=secret
+
 #exit
 # Install Kubevirt
 kvsetup
