@@ -1071,7 +1071,7 @@ tar zxvf krew-linux_amd64.tar.gz
 mv krew-linux_amd64 /usr/local/bin/kubectl-krew
 rm -rf krew-linux_amd64.tar.gz
 echo 'export PATH="${PATH}:${HOME}/.krew/bin"' >> $HOME/.bash_profile
-kubectl krew install ns ctx virt
+kubectl krew install ns ctx modify-secret virt
 . $HOME/.bash_profile
 
 # Setting Network
