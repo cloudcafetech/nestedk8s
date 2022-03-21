@@ -1108,7 +1108,32 @@ sed -i "s/3.16.154.209/$PUBIP/g" employee.yaml
 sed -i "s/3.16.154.209/$PUBIP/g" wordpress.yaml
 
 # Rancher Setup
+docker run -v $PWD/certs:/certs \
+  -e SSL_SUBJECT=rancher.$PUBIP.nip.io \
+  -e SSL_DNS=rancher.$PUBIP.nip.io,localhost,*.cattle-system.svc.cluster.local,rancher.$HIP.nip.io \
+  -e SSL_IP=127.0.0.1 \
+  superseb/omgwtfssl
 
+kubectl create ns cattle-system
+helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+helm install rancher rancher-latest/rancher \
+  --namespace cattle-system \
+  --set hostname=rancher.$PUBIP.nip.io \
+  --set replicas=3 \
+  --set privateCA=true \
+  --set ingress.tls.source=secret \
+  --set bootstrapPassword="rancher@2675" \
+  --version 2.6.3 
+
+kubectl -n cattle-system create secret tls tls-rancher-ingress --cert=$PWD/certs/cert.pem --key=$PWD/certs/key.pem
+cp $PWD/certs/ca.pem $PWD/certs/cacerts.pem
+kubectl -n cattle-system create secret generic tls-ca --from-file=$PWD/certs/cacerts.pem
+
+# To know Rancher Console Password
+#kubectl get secret -n cattle-system bootstrap-secret -o go-template='{{.data.bootstrapPassword|base64decode}}'
+
+# To Reset Password of Rancher Console For
+#kubectl -n cattle-system exec $(kubectl -n cattle-system get pods -l app=rancher | grep '1/1' | head -1 | awk '{ print $1 }') -- reset-password
 
 #exit
 # Install Kubevirt
