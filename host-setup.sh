@@ -9,6 +9,7 @@ K8S_VER=1.20.15
 DATE=$(date +"%d%m%y")
 TOKEN=$DATE.1a7dd4cc8d1f4cc5
 PUBIP=`curl -s http://169.254.169.254/latest/meta-data/public-ipv4`
+HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
 #VIRTYPE=VM
 #KUBEMASTER=
 
