@@ -3,7 +3,7 @@
 
 PUBIP=`curl -s http://169.254.169.254/latest/meta-data/public-ipv4`
 echo $PUBIP
-HIP=`ip -o -4 addr list ens224 | awk '{print $4}' | cut -d/ -f1`
+HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
 echo $HIP
 RNS=cattle-system
 DIR=certs
