@@ -152,7 +152,7 @@ options {
 //      dnssec-lookaside auto;
         # Using Google DNS
         forwarders {
-                $GW
+                $GW;
                 8.8.8.8;
                 8.8.4.4;
         };
