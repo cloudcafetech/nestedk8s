@@ -2,43 +2,82 @@
 # Openshift Jumphost (DNS,LB,NFS,DHCP,WEB) host setup script
 # Ref: (https://www.linuxtechi.com/install-openshift-baremetal-upi/)
 
-DOMAIN=cloudcafe.in
+DOMAIN=cloudcafe.tech
+CTX=ocp414
+OCPVER=4.14
+
+PULLSECRET='{"auths":{"fake":{"auth": "bar"}}}'
+#PULLSECRET='copy-and-paste-secret-file'
+
+HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
+SUBNET=`echo $HIP | cut -d. -f1-3`
+REV=`echo $SUBNET | awk -F . '{print $3"."$2"."$1".in-addr.arpa"}'`
+
+# Change IP, MAC, Hostname & GW
+
+GW=192.168.29.1 # JIO Router Gateway
+
+BASEMAC=BC:24:11
+
+JIP=214
+JIP2=215
+BIP=216
+M1IP=217
+M2IP=218
+M3IP=219
+I1IP=220
+I2IP=221
+W1IP=222
+W2IP=223
 
 BOOT=bootstrap
 MAS1=ocpmaster1
 MAS2=ocpmaster2
 MAS3=ocpmaster3
-WOR1=ocpworker1
-WOR2=ocpworker2
 INF1=ocpinfra1
 INF2=ocpinfra2
+WOR1=ocpworker1
+WOR2=ocpworker2
 JUMP=jumphost
 
-HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
-SUBNET=`echo $HIP | cut -d. -f1-3`
-REV=`echo $SUBNET | awk -F . '{print $3"."$2"."$1".in-addr.arpa"}' `
+BOOTMAC=$BASEMAC:11:22:88
+MAS1MAC=$BASEMAC:11:22:11
+MAS2MAC=$BASEMAC:11:22:22
+MAS3MAC=$BASEMAC:11:22:33
+INF1MAC=$BASEMAC:11:22:44
+INF2MAC=$BASEMAC:11:22:55
+WOR1MAC=$BASEMAC:11:22:66
+WOR2MAC=$BASEMAC:11:22:77
 
-BOOTIP=$SUBNET.216
-MAS1IP=$SUBNET.217
-MAS2IP=$SUBNET.218
-MAS3IP=$SUBNET.219
-WOR1IP=$SUBNET.220
-WOR2IP=$SUBNET.221
-INF1IP=$SUBNET.222
-INF2IP=$SUBNET.223
-JUMPIP=$SUBNET.215
+#########################
+## DO NOT MODIFY BELOW ##
+#########################
 
-BOOTMAC=bomac
-MAS1MAC=m1mac
-MAS2MAC=m2mac
-MAS3MAC=m3mac
-WOR1MAC=w1mac
-WOR2MAC=w2mac
-INF1MAC=i1mac
-INF2MAC=i2mac
+# As apiVIPs & ingressVIPs need different ip, create secondary IP in same server (Haproxy)
 
-PULLSECRET='{"auths":{"fake":{"auth": "bar"}}}'
-#PULLSECRET='copy-and-paste-secret-file'
+ifconfig eth0:1 $SUBNET.$JIP2 netmask 255.255.255.0 up
+#ip addr add 192.168.10.10/24 dev eth0
+
+cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-eth0:1
+DEVICE=eth0:1
+BOOTPROTO=static
+IPADDR=$SUBNET.$JIP2
+NETMASK=255.255.255.0
+ONBOOT=yes
+EOF
+
+service network restart
+
+JUMPIP=$SUBNET.$JIP
+JUMPIP2=$SUBNET.$JIP2
+BOOTIP=$SUBNET.$BIP
+MAS1IP=$SUBNET.$M1IP
+MAS2IP=$SUBNET.$M2IP
+MAS3IP=$SUBNET.$M3IP
+INF1IP=$SUBNET.$I1IP
+INF2IP=$SUBNET.$I2IP
+WOR1IP=$SUBNET.$W1IP
+WOR2IP=$SUBNET.$M2IP
 
 red=$(tput setaf 1)
 grn=$(tput setaf 2)
@@ -51,18 +90,18 @@ nor=$(tput sgr0)
 toolsetup() {
 
 echo "$bld$grn Downloading & Installing Openshift Software $nor"
-curl -s -o openshift-install-linux.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-install-linux.tar.gz
+curl -s -o openshift-install-linux.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-$OCPVER/openshift-install-linux.tar.gz
 tar xpvf openshift-install-linux.tar.gz
 rm -rf openshift-install-linux.tar.gz
 mv openshift-install /usr/local/bin
 
-curl -s -o openshift-client-linux.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-client-linux.tar.gz
+curl -s -o openshift-client-linux.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-$OCPVER/openshift-client-linux.tar.gz
 tar xvf openshift-client-linux.tar.gz
 rm -rf openshift-client-linux.tar.gz
 mv oc kubectl /usr/local/bin
 
-curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.9/latest/rhcos-live.x86_64.iso
-curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.9/latest/rhcos-metal.x86_64.raw.gz
+curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-live.x86_64.iso
+curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-metal.x86_64.raw.gz
 
 #curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-live.x86_64.iso
 #curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-metal.x86_64.raw.gz
@@ -86,7 +125,7 @@ cat <<EOF > /etc/named.conf
 //
 
 options {
-        listen-on port 53 { 127.0.0.1; $JUMPIP; };
+        listen-on port 53 { 127.0.0.1; $JUMPIP; $JUMPIP2; };
 #       listen-on-v6 port 53 { any; };
         directory       "/var/named";
         dump-file       "/var/named/data/cache_dump.db";
@@ -113,6 +152,7 @@ options {
 //      dnssec-lookaside auto;
         # Using Google DNS
         forwarders {
+                $GW
                 8.8.8.8;
                 8.8.4.4;
         };
@@ -165,41 +205,42 @@ cat <<EOF > /etc/named/zones/db.$DOMAIN
 
 ; Name server - A records
 $JUMP.$DOMAIN.		IN	A	$JUMPIP
+$JUMP.$DOMAIN.		IN	A	$JUMPIP2
 
 ; Temp Bootstrap Node
 $BOOT.$DOMAIN.		IN	A	$BOOTIP
 
 ; Controlplane Node
-$MAS1.lab.$DOMAIN.	IN	A	$MAS1IP
-$MAS2.lab.$DOMAIN.	IN	A	$MAS2IP
-$MAS3.lab.$DOMAIN.	IN	A	$MAS3IP
+$MAS1.$CTX.$DOMAIN.	IN	A	$MAS1IP
+$MAS2.$CTX.$DOMAIN.	IN	A	$MAS2IP
+$MAS3.$CTX.$DOMAIN.	IN	A	$MAS3IP
 
 ; Worker Node
-$WOR1.lab.$DOMAIN.	IN	A	$WOR1IP
-$WOR2.lab.$DOMAIN.	IN	A	$WOR2IP
+$WOR1.$CTX.$DOMAIN.	IN	A	$WOR1IP
+$WOR2.$CTX.$DOMAIN.	IN	A	$WOR2IP
 
 ; Infra Node
-$INF1.lab.$DOMAIN.	IN	A	$INF1IP
-$INF2.lab.$DOMAIN.	IN	A	$INF2IP
+$INF1.$CTX.$DOMAIN.	IN	A	$INF1IP
+$INF2.$CTX.$DOMAIN.	IN	A	$INF2IP
 
 ; Openshift Internal - Load balancer
-api.lab.$DOMAIN.	IN	A	$JUMPIP
-api-int.lab.$DOMAIN.	IN	A	$JUMPIP
-*.apps.lab.$DOMAIN.	IN	A	$JUMPIP
+api.$CTX.$DOMAIN.	IN	A	$JUMPIP
+api-int.$CTX.$DOMAIN.	IN	A	$JUMPIP
+*.apps.$CTX.$DOMAIN.	IN	A	$JUMPIP2
 
 ; ETCD Cluster
-etcd-0.lab.$DOMAIN.	IN	A	$MAS1IP
-etcd-1.lab.$DOMAIN.	IN	A	$MAS2IP
-etcd-2.lab.$DOMAIN.	IN	A	$MAS3IP
+etcd-0.$CTX.$DOMAIN.	IN	A	$MAS1IP
+etcd-1.$CTX.$DOMAIN.	IN	A	$MAS2IP
+etcd-2.$CTX.$DOMAIN.	IN	A	$MAS3IP
 
 
-; Openshift Internal SRV records (cluster name - lab)
-_etcd-server-ssl._tcp.lab.$DOMAIN.	86400	IN	SRV	0	10	2380	etcd-0.lab
-_etcd-server-ssl._tcp.lab.$DOMAIN.	86400	IN	SRV	0	10	2380	etcd-1.lab
-_etcd-server-ssl._tcp.lab.$DOMAIN.	86400	IN	SRV	0	10	2380	etcd-2.lab
+; Openshift Internal SRV records (cluster name - $CTX)
+_etcd-server-ssl._tcp.$CTX.$DOMAIN.	86400	IN	SRV	0	10	2380	etcd-0.$CTX
+_etcd-server-ssl._tcp.$CTX.$DOMAIN.	86400	IN	SRV	0	10	2380	etcd-1.$CTX
+_etcd-server-ssl._tcp.$CTX.$DOMAIN.	86400	IN	SRV	0	10	2380	etcd-2.$CTX
 
-oauth-openshift.apps.lab.$DOMAIN.	IN	A	$JUMPIP
-console-openshift-console.apps.lab.$DOMAIN.	IN	A	$JUMPIP
+;oauth-openshift.apps.$CTX.$DOMAIN.	IN	A	$JUMPIP2
+;console-openshift-console.apps.$CTX.$DOMAIN.	IN	A	$JUMPIP2
 
 EOF
 
@@ -217,23 +258,24 @@ cat <<EOF > /etc/named/zones/db.reverse
 	IN  	NS  	$JUMP.$DOMAIN.
 
 ; Name servers - PTR records
-215	IN	PTR	$JUMP.$DOMAIN.
+$JIP	IN	PTR	$JUMP.$DOMAIN.
+$JIP2	IN	PTR	$JUMP.$DOMAIN.
 
 ; OpenShift Container Platform Cluster - PTR records
-216	IN	PTR	$BOOT.$DOMAIN.
+$BIP	IN	PTR	$BOOT.$DOMAIN.
 ;
-217	IN	PTR	$MAS1.lab.$DOMAIN.
-218	IN	PTR	$MAS2.lab.$DOMAIN.
-219	IN	PTR	$MAS3.lab.$DOMAIN.
+$M1IP	IN	PTR	$MAS1.$CTX.$DOMAIN.
+$M2IP	IN	PTR	$MAS2.$CTX.$DOMAIN.
+$M3IP	IN	PTR	$MAS3.$CTX.$DOMAIN.
 ;
-220	IN	PTR	$WOR1.lab.$DOMAIN.
-221	IN	PTR	$WOR2.lab.$DOMAIN.
+$W1IP	IN	PTR	$WOR1.$CTX.$DOMAIN.
+$W2IP	IN	PTR	$WOR2.$CTX.$DOMAIN.
 ;
-222	IN	PTR	$INF1.lab.$DOMAIN.
-223	IN	PTR	$INF2.lab.$DOMAIN.
+$I1IP	IN	PTR	$INF1.$CTX.$DOMAIN.
+$I2IP	IN	PTR	$INF2.$CTX.$DOMAIN.
 ;
-215	IN	PTR	api.lab.$DOMAIN.
-215	IN	PTR	api-int.lab.$DOMAIN.
+$JIP	IN	PTR	api.$CTX.$DOMAIN.
+$JIP	IN	PTR	api-int.$CTX.$DOMAIN.
 EOF
 
 echo 'OPTIONS="-4"' >>/etc/sysconfig/named
@@ -495,17 +537,22 @@ controlPlane:
   name: master
   replicas: 3
 metadata:
-  name: lab # Cluster name
+  name: $CTX # Cluster name
 networking:
   clusterNetwork:
     - cidr: 10.128.0.0/14
       hostPrefix: 23
-  networkType: OpenShiftSDN
+  networkType: OVNKubernetes
   serviceNetwork:
     - 172.30.0.0/16
 
 platform:
-  none: {}
+#  none: {}
+  baremetal:
+    apiVIPs:
+      - "$JUMPIP"
+    ingressVIPs:
+      - "$JUMPIP2"
 fips: false
 pullSecret: 'PULL_SECRET'  
 sshKey: "ssh-rsa PUBLIC_SSH_KEY"  
