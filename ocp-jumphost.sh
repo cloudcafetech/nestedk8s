@@ -19,7 +19,9 @@ GW=192.168.29.1 # JIO Router Gateway
 
 BASEMAC=BC:24:11
 
+HIPT=`echo $HIP | awk -F . '{print $4}'`
 JIP=214
+if [[ "$HIPT" != "$JIP" ]]; then JIP=$HIPT; fi
 JIP2=215
 BIP=216
 M1IP=217
