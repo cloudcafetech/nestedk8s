@@ -96,7 +96,7 @@ echo "$bld$grn Downloading Openshift Kernel ... $nor"
 curl -s -o rhcos-kernel https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-live-kernel-x86_64
 echo "$bld$grn Downloading Openshift Metal GZ ... $nor"
 curl -s -o rhcos-metal.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-metal.x86_64.raw.gz
-curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-metal.x86_64.raw.gz
+#curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-metal.x86_64.raw.gz
 
 #curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-qemu.x86_64.qcow2.gz
 #sleep 5
@@ -654,7 +654,7 @@ cp ~/ocp-install/install-config.yaml ~/ocp-install/install-config.yaml-bak
 cp ~/ocp-install/install-config.yaml install-config.yaml
 
 cp rhcos-live.x86_64.iso /var/www/html/ocp4/rhcos-live.x86_64.iso
-cp rhcos-metal.x86_64.raw.gz /var/www/html/ocp4/rhcos
+cp rhcos-metal.raw.gz /var/www/html/ocp4/rhcos
 cp rhcos-metal.raw.gz /var/www/html/ocp4/rhcos-metal.raw.gz
 #cp rhcos-qemu.x86_64.qcow2 /var/www/html/ocp4/rhcos-qemu.x86_64.qcow2
 
