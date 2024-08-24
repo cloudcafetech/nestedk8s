@@ -553,12 +553,12 @@ networking:
   serviceNetwork:
     - 172.30.0.0/16
 platform:
-#  none: {}
-  baremetal:
-    apiVIPs:
-      - "$JUMPIP"
-    ingressVIPs:
-      - "$JUMPIP2"
+  none: {}
+#  baremetal:
+#    apiVIPs:
+#      - "$JUMPIP"
+#    ingressVIPs:
+#      - "$JUMPIP2"
 fips: false
 pullSecret: 'PULL_SECRET'  
 sshKey: "ssh-rsa PUBLIC_SSH_KEY"  
