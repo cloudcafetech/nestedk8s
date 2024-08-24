@@ -88,12 +88,15 @@ tar xvf openshift-client-linux.tar.gz
 rm -rf openshift-client-linux.tar.gz
 mv oc kubectl /usr/local/bin
 
-echo "$bld$grn Downloading Openshift Images & Kernel ... $nor"
+echo "$bld$grn Downloading Openshift ISO ... $nor"
 curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-live.x86_64.iso
-curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-metal.x86_64.raw.gz
+echo "$bld$grn Downloading Openshift Images ... $nor"
 curl -s -o rhcos-initramfs.img https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-live-initramfs.x86_64.img
+echo "$bld$grn Downloading Openshift Kernel ... $nor"
 curl -s -o rhcos-kernel https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-live-kernel-x86_64
+echo "$bld$grn Downloading Openshift Metal GZ ... $nor"
 curl -s -o rhcos-metal.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-metal.x86_64.raw.gz
+curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-metal.x86_64.raw.gz
 
 #curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-qemu.x86_64.qcow2.gz
 #sleep 5
