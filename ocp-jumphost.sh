@@ -628,7 +628,7 @@ metadata:
   name: $CTX # Cluster name
 networking:
   machineNetwork:
-    - cidr: SUBNET.0/24
+    - cidr: $SUBNET.0/24
   clusterNetwork:
     - cidr: 10.128.0.0/14
       hostPrefix: 23
