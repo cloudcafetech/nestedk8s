@@ -394,7 +394,7 @@ mkdir -p /var/lib/tftpboot/pxelinux.cfg/
 cp rhcos-initramfs.img /var/lib/tftpboot/rhcos/rhcos-initramfs.img
 cp rhcos-kernel /var/lib/tftpboot/rhcos/rhcos-kernel
 
-cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/bootstrap << EOF
+cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/bootstrap
 DEFAULT pxeboot
 TIMEOUT 5
 PROMPT 0
@@ -403,7 +403,7 @@ LABEL pxeboot
     APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-metal.raw.gz coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
 EOF
 
-cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/master << EOF
+cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/master
 DEFAULT pxeboot
 TIMEOUT 5
 PROMPT 0
