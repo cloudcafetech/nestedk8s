@@ -88,12 +88,16 @@ tar xvf openshift-client-linux.tar.gz
 rm -rf openshift-client-linux.tar.gz
 mv oc kubectl /usr/local/bin
 
-echo "$bld$grn Downloading Openshift Images ... $nor"
+echo "$bld$grn Downloading Openshift Images & Kernel ... $nor"
 curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-live.x86_64.iso
 curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-metal.x86_64.raw.gz
-curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-qemu.x86_64.qcow2.gz
-sleep 5
-gunzip rhcos-qemu.x86_64.qcow2.gz
+curl -s -o rhcos-initramfs.img https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-live-initramfs.x86_64.img
+curl -s -o rhcos-kernel https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-live-kernel-x86_64
+curl -s -o rhcos-metal.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-metal.x86_64.raw.gz
+
+#curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-qemu.x86_64.qcow2.gz
+#sleep 5
+#gunzip rhcos-qemu.x86_64.qcow2.gz
 #file rhcos-qemu.x86_64.qcow2
 
 #curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-live.x86_64.iso
@@ -349,6 +353,82 @@ firewall-cmd --add-service=dhcp --permanent
 firewall-cmd --reload
 }
 
+# Link the MAC
+mac-pxe-update() {
+ln -s $1 $(echo "$2" | sed 's/^/01-/g' | sed 's/:/-/g')
+}
+
+# Configure TFTP Server
+tftpsetup() {
+
+echo "$bld$grn Configuring tftp Server $nor"
+yum install tftp tftp-server xinetd -y
+
+cat <<EOF > /etc/xinetd.d/tftp
+service tftp
+{
+         socket_type      = dgram
+         protocol         = udp
+         wait             = yes
+         user             = root
+         server           = /usr/sbin/in.tftpd
+         server_args      = -c -s /var/lib/tftpboot
+         disable          = no
+         per_source       = 11
+         cps              = 100 2
+         flags            = IPv4
+}
+EOF
+
+yum install -y syslinux-tftpboot
+systemctl start xinetd; systemctl enable --now xinetd
+firewall-cmd --add-port 69/udp --permanent --zone=${FIREWALLD_DEFAULT_ZONE}
+setsebool -P tftp_anon_write 1
+setsebool -P tftp_home_dir 1
+
+mkdir -p /var/lib/tftpboot/rhcos/
+mkdir -p /var/lib/tftpboot/pxelinux.cfg/
+cp rhcos-initramfs.img /var/lib/tftpboot/rhcos/rhcos-initramfs.img
+cp rhcos-kernel /var/lib/tftpboot/rhcos/rhcos-kernel
+
+cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/bootstrap << EOF
+DEFAULT pxeboot
+TIMEOUT 5
+PROMPT 0
+LABEL pxeboot
+    KERNEL rhcos/rhcos-kernel
+    APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-metal.raw.gz coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
+EOF
+
+cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/master << EOF
+DEFAULT pxeboot
+TIMEOUT 5
+PROMPT 0
+LABEL pxeboot
+    KERNEL rhcos/rhcos-kernel 
+    APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-metal.raw.gz coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
+EOF
+
+cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/worker
+DEFAULT pxeboot
+TIMEOUT 5
+PROMPT 0
+LABEL pxeboot
+    KERNEL rhcos/rhcos-kernel
+    APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-metal.raw.gz coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
+EOF
+
+mac-pxe-update $BOOT $BOOTMAC
+mac-pxe-update $MAS1 $MAS1MAC
+mac-pxe-update $MAS2 $MAS2MAC
+mac-pxe-update $MAS3 $MAS3MAC
+mac-pxe-update $INF1 $INF1MAC
+mac-pxe-update $INF2 $INF2MAC
+mac-pxe-update $WOR1 $WOR1MAC
+mac-pxe-update $WOR2 $WOR2MAC
+
+}
+
 # Configure Apache Web Server
 websetup() {
 
@@ -572,7 +652,8 @@ cp ~/ocp-install/install-config.yaml install-config.yaml
 
 cp rhcos-live.x86_64.iso /var/www/html/ocp4/rhcos-live.x86_64.iso
 cp rhcos-metal.x86_64.raw.gz /var/www/html/ocp4/rhcos
-cp rhcos-qemu.x86_64.qcow2 /var/www/html/ocp4/rhcos-qemu.x86_64.qcow2
+cp rhcos-metal.raw.gz /var/www/html/ocp4/rhcos-metal.raw.gz
+#cp rhcos-qemu.x86_64.qcow2 /var/www/html/ocp4/rhcos-qemu.x86_64.qcow2
 
 openshift-install create manifests --dir ~/ocp-install/
 sed -i 's/mastersSchedulable: true/mastersSchedulable: false/' ~/ocp-install/manifests/cluster-scheduler-02-config.yml
@@ -592,6 +673,7 @@ setupall () {
 toolsetup
 dnssetup
 dhcpsetup
+tftpsetup
 websetup
 lbsetup
 nfssetup
@@ -607,6 +689,9 @@ case "$1" in
             ;;
     'dhcpsetup')
             dhcpsetup
+            ;;
+    'tftpsetup')
+            tftpsetup
             ;;
     'websetup')
             websetup
@@ -626,9 +711,9 @@ case "$1" in
     *)
             clear
             echo
-            echo "$bld$blu Openshift Jumphost (DNS,LB,NFS,DHCP,WEB) host setup script $nor"
+            echo "$bld$blu Openshift Jumphost (DNS,LB,NFS,DHCP,TFTP,WEB) host setup script $nor"
             echo
-            echo "$bld$grn Usage: $0 { toolsetup | dnssetup | dhcpsetup | websetup | lbsetup | nfssetup | manifes | setupall } $nor"
+            echo "$bld$grn Usage: $0 { toolsetup | dnssetup | dhcpsetup | tftpsetup | websetup | lbsetup | nfssetup | manifes | setupall } $nor"
             echo
             exit 1
             ;;
