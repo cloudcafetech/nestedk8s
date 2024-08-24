@@ -4,7 +4,8 @@
 
 DOMAIN=cloudcafe.tech
 CTX=ocp414
-OCPVER=4.14
+OCPVERM=4.14
+OCPVER=4.14.34
 
 PULLSECRET='{"auths":{"fake":{"auth": "bar"}}}'
 #PULLSECRET='copy-and-paste-secret-file'
@@ -77,20 +78,20 @@ nor=$(tput sgr0)
 toolsetup() {
 
 echo "$bld$grn Downloading & Installing Openshift binary $nor"
-curl -s -o openshift-install-linux.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-$OCPVER/openshift-install-linux.tar.gz
+curl -s -o openshift-install-linux.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$OCPVER/openshift-install-linux.tar.gz
 tar xpvf openshift-install-linux.tar.gz
 rm -rf openshift-install-linux.tar.gz
 mv openshift-install /usr/local/bin
 
-curl -s -o openshift-client-linux.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-$OCPVER/openshift-client-linux.tar.gz
+curl -s -o openshift-client-linux.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$OCPVER/openshift-client-linux.tar.gz
 tar xvf openshift-client-linux.tar.gz
 rm -rf openshift-client-linux.tar.gz
 mv oc kubectl /usr/local/bin
 
 echo "$bld$grn Downloading Openshift Images ... $nor"
-curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-live.x86_64.iso
-curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-metal.x86_64.raw.gz
-curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-qemu.x86_64.qcow2.gz
+curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-live.x86_64.iso
+curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-metal.x86_64.raw.gz
+curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-qemu.x86_64.qcow2.gz
 sleep 5
 gunzip rhcos-qemu.x86_64.qcow2.gz
 #file rhcos-qemu.x86_64.qcow2
