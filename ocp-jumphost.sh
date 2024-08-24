@@ -89,6 +89,10 @@ mv oc kubectl /usr/local/bin
 
 curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-live.x86_64.iso
 curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-metal.x86_64.raw.gz
+curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-qemu.x86_64.qcow2.gz
+sleep 5
+gunzip rhcos-qemu.x86_64.qcow2.gz
+#file rhcos-qemu.x86_64.qcow2
 
 #curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-live.x86_64.iso
 #curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-metal.x86_64.raw.gz
