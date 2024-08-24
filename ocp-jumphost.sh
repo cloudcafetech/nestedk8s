@@ -536,7 +536,7 @@ baseDomain: $DOMAIN
 compute:
   - hyperthreading: Enabled
     name: worker
-    replicas: 0 
+    replicas: 4
 controlPlane:
   hyperthreading: Enabled
   name: master
@@ -544,13 +544,14 @@ controlPlane:
 metadata:
   name: $CTX # Cluster name
 networking:
+  machineNetwork:
+    - cidr: SUBNET.0/24
   clusterNetwork:
     - cidr: 10.128.0.0/14
       hostPrefix: 23
   networkType: OVNKubernetes
   serviceNetwork:
     - 172.30.0.0/16
-
 platform:
 #  none: {}
   baremetal:
