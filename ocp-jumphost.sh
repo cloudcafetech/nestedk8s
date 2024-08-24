@@ -90,9 +90,9 @@ mv oc kubectl /usr/local/bin
 echo "$bld$grn Downloading Openshift Images ... $nor"
 curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-live.x86_64.iso
 curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-metal.x86_64.raw.gz
-#curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-qemu.x86_64.qcow2.gz
-#sleep 5
-#gunzip rhcos-qemu.x86_64.qcow2.gz
+curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-qemu.x86_64.qcow2.gz
+sleep 5
+gunzip rhcos-qemu.x86_64.qcow2.gz
 #file rhcos-qemu.x86_64.qcow2
 
 #curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-live.x86_64.iso
@@ -570,6 +570,7 @@ cp ~/ocp-install/install-config.yaml install-config.yaml
 
 cp rhcos-live.x86_64.iso /var/www/html/ocp4/rhcos-live.x86_64.iso
 cp rhcos-metal.x86_64.raw.gz /var/www/html/ocp4/rhcos
+cp rhcos-qemu.x86_64.qcow2 /var/www/html/ocp4/rhcos-qemu.x86_64.qcow2
 
 openshift-install create manifests --dir ~/ocp-install/
 sed -i 's/mastersSchedulable: true/mastersSchedulable: false/' ~/ocp-install/manifests/cluster-scheduler-02-config.yml
