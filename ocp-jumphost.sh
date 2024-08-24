@@ -53,21 +53,6 @@ WOR2MAC=$BASEMAC:11:22:77
 ## DO NOT MODIFY BELOW ##
 #########################
 
-# As apiVIPs & ingressVIPs need different ip, create secondary IP in same server (Haproxy)
-
-ifconfig eth0:1 $SUBNET.$JIP2 netmask 255.255.255.0 up
-#ip addr add 192.168.10.10/24 dev eth0
-
-cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-eth0:1
-DEVICE=eth0:1
-BOOTPROTO=static
-IPADDR=$SUBNET.$JIP2
-NETMASK=255.255.255.0
-ONBOOT=yes
-EOF
-
-service network restart
-
 JUMPIP=$SUBNET.$JIP
 JUMPIP2=$SUBNET.$JIP2
 BOOTIP=$SUBNET.$BIP
@@ -125,7 +110,7 @@ cat <<EOF > /etc/named.conf
 //
 
 options {
-        listen-on port 53 { 127.0.0.1; $JUMPIP; $JUMPIP2; };
+        listen-on port 53 { 127.0.0.1; $HIP; $JUMPIP; $JUMPIP2; };
 #       listen-on-v6 port 53 { any; };
         directory       "/var/named";
         dump-file       "/var/named/data/cache_dump.db";
@@ -371,8 +356,20 @@ firewall-cmd --reload
 # Configure HAProxy
 lbsetup() {
 
+
 echo "$bld$grn Configuring HAProxy Server $nor"
 yum install haproxy -y 
+
+# As apiVIPs & ingressVIPs need different ip, create secondary IP in same server (Haproxy)
+ip addr add $SUBNET.$JIP2/24 dev eth0
+cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-eth0:1
+DEVICE=eth0:1
+BOOTPROTO=static
+IPADDR=$SUBNET.$JIP2
+NETMASK=255.255.255.0
+ONBOOT=yes
+EOF
+#systemctl restart network
 
 cat <<EOF > /etc/haproxy/haproxy.cfg
 # Global settings
