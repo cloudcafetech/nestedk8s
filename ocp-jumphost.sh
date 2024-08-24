@@ -90,9 +90,9 @@ mv oc kubectl /usr/local/bin
 echo "$bld$grn Downloading Openshift Images ... $nor"
 curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-live.x86_64.iso
 curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-metal.x86_64.raw.gz
-curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-qemu.x86_64.qcow2.gz
-sleep 5
-gunzip rhcos-qemu.x86_64.qcow2.gz
+#curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVER/latest/rhcos-qemu.x86_64.qcow2.gz
+#sleep 5
+#gunzip rhcos-qemu.x86_64.qcow2.gz
 #file rhcos-qemu.x86_64.qcow2
 
 #curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/latest/rhcos-live.x86_64.iso
@@ -271,7 +271,7 @@ $JIP	IN	PTR	api-int.$CTX.$DOMAIN.
 EOF
 
 echo 'OPTIONS="-4"' >>/etc/sysconfig/named
-systemctl start named;systemctl enable named
+systemctl start named;systemctl enable --now named
 firewall-cmd --add-port=53/udp --permanent
 firewall-cmd --reload
 
@@ -343,7 +343,7 @@ host $INF2 {
 
 EOF
 
-systemctl start dhcpd;systemctl enable dhcpd
+systemctl start dhcpd;systemctl enable --now dhcpd
 firewall-cmd --add-service=dhcp --permanent
 firewall-cmd --reload
 }
@@ -355,7 +355,7 @@ echo "$bld$grn Configuring Apache Web Server $nor"
 yum install -y httpd
 sed -i 's/Listen 80/Listen 0.0.0.0:8080/' /etc/httpd/conf/httpd.conf
 setsebool -P httpd_read_user_content 1
-systemctl start httpd;systemctl enable httpd
+systemctl start httpd;systemctl enable --now httpd
 firewall-cmd --add-port=8080/tcp --permanent
 firewall-cmd --reload
 }
@@ -479,7 +479,7 @@ backend ocp_https_ingress_backend
 EOF
 
 setsebool -P haproxy_connect_any 1
-systemctl start haproxy;systemctl enable haproxy
+systemctl start haproxy;systemctl enable --now haproxy
 
 firewall-cmd --add-port=6443/tcp --permanent
 firewall-cmd --add-port=6443/tcp --permanent
@@ -504,7 +504,7 @@ cat <<EOF > /etc/exports
 EOF
 
 setsebool -P nfs_export_all_rw 1
-systemctl start nfs-server rpcbind nfs-mountd;systemctl enable nfs-server rpcbind
+systemctl start nfs-server rpcbind nfs-mountd;systemctl enable --now nfs-server rpcbind
 exportfs -rav
 exportfs -v
 
