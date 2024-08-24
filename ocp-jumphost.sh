@@ -5,7 +5,7 @@
 DOMAIN=cloudcafe.tech
 CTX=ocp414
 OCPVERM=4.14
-OCPVER=4.14.35
+OCPVER=4.14.34
 
 PULLSECRET='{"auths":{"fake":{"auth": "bar"}}}'
 #PULLSECRET='copy-and-paste-secret-file'
