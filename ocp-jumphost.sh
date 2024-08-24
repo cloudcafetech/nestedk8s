@@ -112,7 +112,7 @@ cat <<EOF > /etc/named.conf
 //
 
 options {
-        listen-on port 53 { 127.0.0.1; $HIP; $JUMPIP; $JUMPIP2; };
+        listen-on port 53 { 127.0.0.1; $JUMPIP; $JUMPIP2; };
 #       listen-on-v6 port 53 { any; };
         directory       "/var/named";
         dump-file       "/var/named/data/cache_dump.db";
