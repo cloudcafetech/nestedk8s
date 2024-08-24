@@ -9,7 +9,7 @@ OCPVER=4.14
 PULLSECRET='{"auths":{"fake":{"auth": "bar"}}}'
 #PULLSECRET='copy-and-paste-secret-file'
 
-HIP=`ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1`
+HIP=`ip -o -4 addr list eth0 | grep -v secondary | awk '{print $4}' | cut -d/ -f1`
 SUBNET=`echo $HIP | cut -d. -f1-3`
 REV=`echo $SUBNET | awk -F . '{print $3"."$2"."$1".in-addr.arpa"}'`
 
