@@ -90,14 +90,18 @@ mv oc kubectl /usr/local/bin
 
 echo "$bld$grn Downloading Openshift ISO ... $nor"
 curl -s -o rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-live.x86_64.iso
-echo "$bld$grn Downloading Openshift Images ... $nor"
+
+echo "$bld$grn Downloading Openshift Initramfs Images ... $nor"
 curl -s -o rhcos-initramfs.img https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-live-initramfs.x86_64.img
+
 echo "$bld$grn Downloading Openshift Kernel ... $nor"
 curl -s -o rhcos-kernel https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-live-kernel-x86_64
-echo "$bld$grn Downloading Openshift Metal GZ ... $nor"
-curl -s -o rhcos-metal.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-metal.x86_64.raw.gz
-#curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-metal.x86_64.raw.gz
 
+echo "$bld$grn Downloading Openshift Rootfs Image ... $nor"
+curl -s -o rhcos-rootfs.img https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-live-rootfs.x86_64.img
+
+#curl -s -o rhcos-metal.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-$OCPVER-x86_64-metal.x86_64.raw.gz
+#curl -s -o rhcos-metal.x86_64.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-metal.x86_64.raw.gz
 #curl -s -o rhcos-qemu.x86_64.qcow2.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/$OCPVERM/$OCPVER/rhcos-qemu.x86_64.qcow2.gz
 #sleep 5
 #gunzip rhcos-qemu.x86_64.qcow2.gz
@@ -399,8 +403,10 @@ DEFAULT pxeboot
 TIMEOUT 5
 PROMPT 0
 LABEL pxeboot
-    KERNEL rhcos/rhcos-kernel
-    APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-metal.raw.gz coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
+    #KERNEL rhcos/rhcos-kernel
+    #APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
+    KERNEL http://$HIP:8080/ocp4/rhcos-kernel 
+    APPEND ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/master
@@ -408,8 +414,10 @@ DEFAULT pxeboot
 TIMEOUT 5
 PROMPT 0
 LABEL pxeboot
-    KERNEL rhcos/rhcos-kernel 
-    APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-metal.raw.gz coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
+    #KERNEL rhcos/rhcos-kernel 
+    #APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
+    KERNEL http://$HIP:8080/ocp4/rhcos-kernel 
+    APPEND ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/worker
@@ -417,8 +425,10 @@ DEFAULT pxeboot
 TIMEOUT 5
 PROMPT 0
 LABEL pxeboot
-    KERNEL rhcos/rhcos-kernel
-    APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-metal.raw.gz coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
+    #KERNEL rhcos/rhcos-kernel
+    #APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
+    KERNEL http://$HIP:8080/ocp4/rhcos-kernel 
+    APPEND ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
 EOF
 
 mac-pxe-update $BOOT $BOOTMAC
@@ -654,8 +664,10 @@ cp ~/ocp-install/install-config.yaml ~/ocp-install/install-config.yaml-bak
 cp ~/ocp-install/install-config.yaml install-config.yaml
 
 cp rhcos-live.x86_64.iso /var/www/html/ocp4/rhcos-live.x86_64.iso
-cp rhcos-metal.raw.gz /var/www/html/ocp4/rhcos
-cp rhcos-metal.raw.gz /var/www/html/ocp4/rhcos-metal.raw.gz
+cp rhcos-kernel /var/www/html/ocp4/rhcos-kernel
+cp rhcos-initramfs.img /var/www/html/ocp4/rhcos-initramfs.img
+cp rhcos-rootfs.img /var/www/html/ocp4/rhcos-rootfs.img
+
 #cp rhcos-qemu.x86_64.qcow2 /var/www/html/ocp4/rhcos-qemu.x86_64.qcow2
 
 openshift-install create manifests --dir ~/ocp-install/
