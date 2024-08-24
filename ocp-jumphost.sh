@@ -40,7 +40,7 @@ INF1=ocpinfra1
 INF2=ocpinfra2
 WOR1=ocpworker1
 WOR2=ocpworker2
-JUMP=jumphost
+JUMP=`hostname`
 
 BOOTMAC=$BASEMAC:11:22:88
 MAS1MAC=$BASEMAC:11:22:11
