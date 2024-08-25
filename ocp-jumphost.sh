@@ -310,47 +310,78 @@ subnet $SUBNET.0 netmask 255.255.255.0 {
  option subnet-mask              255.255.255.0;
  option domain-name              "$DOMAIN";
  option domain-name-servers       $JUMPIP;
- range $SUBNET.1 $SUBNET.245;
+ range $SUBNET.$BIP $SUBNET.245;
 }
 
-host $BOOT {
- hardware ethernet $BOOTMAC;
- fixed-address $BOOTIP;
-}
+group {
+ next-server  $JUMP.$DOMAIN;
+ option routers                  $JUMPIP; # lan
+ option domain-name              "$DOMAIN";
+ option domain-name-servers       $JUMPIP;
 
-host $MAS1 {
- hardware ethernet $MAS1MAC;
- fixed-address $MAS1IP;
-}
+ host $BOOT {
+  hardware ethernet $BOOTMAC;
+  fixed-address $BOOTIP;
+  filename "pxelinux.0";
+  option host-name $BOOT;
+  option domain-name "$DOMAIN";
+ }
 
-host $MAS2 {
- hardware ethernet $MAS1MAC;
- fixed-address $MAS2IP;
-}
+ host $MAS1 {
+  hardware ethernet $MAS1MAC;
+  fixed-address $MAS1IP;
+  filename "pxelinux.0";
+  option host-name $MAS1;
+  option domain-name "$DOMAIN";
+ }
 
-host $MAS3 {
- hardware ethernet $MAS3MAC;
- fixed-address $MAS3IP;
-}
+ host $MAS2 {
+  hardware ethernet $MAS2MAC;
+  fixed-address $MAS2IP;
+  filename "pxelinux.0";
+  option host-name $MAS2;
+  option domain-name "$DOMAIN";
+ }
 
-host $WOR1 {
- hardware ethernet $WOR1MAC;
- fixed-address $WOR1IP;
-}
+ host $MAS3 {
+  hardware ethernet $MAS3MAC;
+  fixed-address $MAS3IP;
+  filename "pxelinux.0";
+  option host-name $MAS3;
+  option domain-name "$DOMAIN";
+ }
 
-host $WOR2 {
- hardware ethernet $WOR2MAC;
- fixed-address $WOR2IP;
-}
+ host $WOR1 {
+  hardware ethernet $WOR1MAC;
+  fixed-address $WOR1IP;
+  filename "pxelinux.0";
+  option host-name $WOR1;
+  option domain-name "$DOMAIN";
+ }
 
-host $INF1 {
- hardware ethernet $INF1MAC;
- fixed-address $INF1IP;
-}
+ host $WOR2 {
+  hardware ethernet $WOR2MAC;
+  fixed-address $WOR2IP;
+  filename "pxelinux.0";
+  option host-name $WOR2;
+  option domain-name "$DOMAIN";
+ }
 
-host $INF2 {
- hardware ethernet $INF2MAC;
- fixed-address $INF2IP;
+ host $INF1 {
+  hardware ethernet $INF1MAC;
+  fixed-address $INF1IP;
+  filename "pxelinux.0";
+  option host-name $INF1;
+  option domain-name "$DOMAIN";
+ }
+
+ host $INF2 {
+  hardware ethernet $INF2MAC;
+  fixed-address $INF2IP;
+  filename "pxelinux.0";
+  option host-name $INF2;
+  option domain-name "$DOMAIN";
+ }
 }
 
 EOF
@@ -358,11 +389,6 @@ EOF
 systemctl start dhcpd;systemctl enable --now dhcpd
 firewall-cmd --add-service=dhcp --permanent
 firewall-cmd --reload
-}
-
-# Link the MAC
-mac-pxe-update() {
-ln -s $1 $(echo "$2" | sed 's/^/01-/g' | sed 's/:/-/g')
 }
 
 # Configure TFTP Server
@@ -399,46 +425,58 @@ cp rhcos-initramfs.img /var/lib/tftpboot/rhcos/rhcos-initramfs.img
 cp rhcos-kernel /var/lib/tftpboot/rhcos/rhcos-kernel
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/bootstrap
-DEFAULT pxeboot
-TIMEOUT 5
-PROMPT 0
-LABEL pxeboot
-    #KERNEL rhcos/rhcos-kernel
-    #APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
-    KERNEL http://$HIP:8080/ocp4/rhcos-kernel 
-    APPEND ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
+default menu.c32
+ prompt 1
+ timeout 9
+ ONTIMEOUT 1
+ menu title ######## PXE Boot Menu ########
+ label 1
+ menu label ^1) Install Bootstrap Node
+ menu default
+ #kernel rhcos/rhcos-kernel
+ #append ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
+ kernel http://$HIP:8080/ocp4/rhcos-kernel 
+ append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/master
-DEFAULT pxeboot
-TIMEOUT 5
-PROMPT 0
-LABEL pxeboot
-    #KERNEL rhcos/rhcos-kernel 
-    #APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
-    KERNEL http://$HIP:8080/ocp4/rhcos-kernel 
-    APPEND ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
+default menu.c32
+ prompt 1
+ timeout 9
+ ONTIMEOUT 1
+ menu title ######## PXE Boot Menu ########
+ label 1
+ menu label ^1) Install Master Node
+ menu default
+ #kernel rhcos/rhcos-kernel 
+ #append ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
+ kernel http://$HIP:8080/ocp4/rhcos-kernel 
+ append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/worker
-DEFAULT pxeboot
-TIMEOUT 5
-PROMPT 0
-LABEL pxeboot
-    #KERNEL rhcos/rhcos-kernel
-    #APPEND ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
-    KERNEL http://$HIP:8080/ocp4/rhcos-kernel 
-    APPEND ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
+default menu.c32
+ prompt 1
+ timeout 9
+ ONTIMEOUT 1
+ menu title ######## PXE Boot Menu ########
+ label 1
+ menu label ^1) Install Worker Node
+ menu default
+ #kernel rhcos/rhcos-kernel
+ #append ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
+ kernel http://$HIP:8080/ocp4/rhcos-kernel 
+ append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
 EOF
 
-mac-pxe-update $BOOT $BOOTMAC
-mac-pxe-update $MAS1 $MAS1MAC
-mac-pxe-update $MAS2 $MAS2MAC
-mac-pxe-update $MAS3 $MAS3MAC
-mac-pxe-update $INF1 $INF1MAC
-mac-pxe-update $INF2 $INF2MAC
-mac-pxe-update $WOR1 $WOR1MAC
-mac-pxe-update $WOR2 $WOR2MAC
+cp /var/lib/tftpboot/pxelinux.cfg/bootstrap /var/lib/tftpboot/pxelinux.cfg/$BOOTMAC
+cp /var/lib/tftpboot/pxelinux.cfg/master /var/lib/tftpboot/pxelinux.cfg/$MAS1MAC
+cp /var/lib/tftpboot/pxelinux.cfg/master /var/lib/tftpboot/pxelinux.cfg/$MAS2MAC
+cp /var/lib/tftpboot/pxelinux.cfg/master /var/lib/tftpboot/pxelinux.cfg/$MAS3MAC
+cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$INF1MAC
+cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$INF2MAC
+cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$WOR1MAC
+cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$WOR2MAC
 
 }
 
