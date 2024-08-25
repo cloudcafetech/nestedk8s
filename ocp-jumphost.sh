@@ -414,7 +414,7 @@ domain=$DOMAIN
 dhcp-range= eth0,$SUBNET.$BIP,$SUBNET.225,255.255.255.0,1h
 
 # PXE
-dhcp-boot=pxelinux.0,pxeserver,$JUMPIP
+dhcp-boot=pxelinux.0,$JUMP,$JUMPIP
 
 # Gateway
 dhcp-option=3,$GW
