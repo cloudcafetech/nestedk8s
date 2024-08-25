@@ -391,33 +391,14 @@ firewall-cmd --add-service=dhcp --permanent
 firewall-cmd --reload
 }
 
-# Configure TFTP Server
+# Configure TFTP Server with PXE
 tftpsetup() {
 
-echo "$bld$grn Configuring tftp Server $nor"
-yum install tftp tftp-server xinetd -y
+echo "$bld$grn Configuring TFTP Server with PXE $nor"
+yum install tftp-server syslinux -y
 
-cat <<EOF > /etc/xinetd.d/tftp
-service tftp
-{
-         socket_type      = dgram
-         protocol         = udp
-         wait             = yes
-         user             = root
-         server           = /usr/sbin/in.tftpd
-         server_args      = -c -s /var/lib/tftpboot
-         disable          = no
-         per_source       = 11
-         cps              = 100 2
-         flags            = IPv4
-}
-EOF
-
-yum install -y syslinux-tftpboot
-systemctl start xinetd; systemctl enable --now xinetd
-firewall-cmd --add-port 69/udp --permanent --zone=${FIREWALLD_DEFAULT_ZONE}
-setsebool -P tftp_anon_write 1
-setsebool -P tftp_home_dir 1
+cp /usr/share/syslinux/pxelinux.0 /var/lib/tftpboot/
+cp -v /usr/share/syslinux/{menu.c32,vesamenu.c32,ldlinux.c32,libcom32.c32,libutil.c32} /var/lib/tftpboot/
 
 mkdir -p /var/lib/tftpboot/rhcos/
 mkdir -p /var/lib/tftpboot/pxelinux.cfg/
@@ -477,6 +458,10 @@ cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$INF1MAC
 cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$INF2MAC
 cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$WOR1MAC
 cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$WOR2MAC
+
+systemctl start tftp;systemctl enable --now tftp
+firewall-cmd --add-service=tftp --permanent 
+firewall-cmd --reload
 
 }
 
