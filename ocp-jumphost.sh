@@ -129,7 +129,7 @@ cat <<EOF > /etc/named.conf
 //
 
 options {
-        listen-on port 53 { 127.0.0.1; $JUMPIP; $JUMPIP2; };
+        listen-on port 53 { $JUMPIP; };
 #       listen-on-v6 port 53 { any; };
         directory       "/var/named";
         dump-file       "/var/named/data/cache_dump.db";
@@ -395,7 +395,8 @@ firewall-cmd --reload
 tftpsetup() {
 
 echo "$bld$grn Configuring DNSMASQ, TFTP with PXE Server $nor"
-yum install dnsmasq syslinux tftp-server -y
+yum install net-tools nmstate dnsmasq syslinux tftp-server -y
+ifconfig eth0:0 192.168.29.226 netmask 255.255.255.0 up
 
 cp -r /usr/share/syslinux/* /var/lib/tftpboot
 mkdir /var/lib/tftpboot/rhcos
@@ -406,12 +407,12 @@ cp rhcos-kernel /var/lib/tftpboot/rhcos/rhcos-kernel
 mv /etc/dnsmasq.conf  /etc/dnsmasq.conf.backup
 
 cat <<EOF > /etc/dnsmasq.conf
-interface=eth0,lo
-#bind-interfaces
+interface=eth0:0
+bind-interfaces
 domain=$DOMAIN
 
 # DHCP range-leases
-dhcp-range= eth0,$SUBNET.$BIP,$SUBNET.225,255.255.255.0,1h
+dhcp-range= eth0:0,$SUBNET.$BIP,$SUBNET.225,255.255.255.0,1h
 
 # PXE
 dhcp-boot=pxelinux.0,$JUMP,$JUMPIP
@@ -517,18 +518,17 @@ lbsetup() {
 
 
 echo "$bld$grn Configuring HAProxy Server $nor"
-yum install haproxy -y 
+yum install net-tools nmstate haproxy -y
 
 # As apiVIPs & ingressVIPs need different ip, create secondary IP in same server (Haproxy)
-ip addr add $SUBNET.$JIP2/24 dev eth0
-cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-eth0:1
-DEVICE=eth0:1
+ifconfig eth0:0 $SUBNET.$JIP2 netmask 255.255.255.0
+cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-eth0:0
+DEVICE=eth0:0
 BOOTPROTO=static
 IPADDR=$SUBNET.$JIP2
 NETMASK=255.255.255.0
 ONBOOT=yes
 EOF
-#systemctl restart network
 
 cat <<EOF > /etc/haproxy/haproxy.cfg
 # Global settings
