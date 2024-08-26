@@ -396,7 +396,6 @@ tftpsetup() {
 
 echo "$bld$grn Configuring DNSMASQ, TFTP with PXE Server $nor"
 yum install net-tools nmstate dnsmasq syslinux tftp-server -y
-ifconfig eth0:0 192.168.29.226 netmask 255.255.255.0 up
 
 cp -r /usr/share/syslinux/* /var/lib/tftpboot
 mkdir /var/lib/tftpboot/rhcos
@@ -407,12 +406,12 @@ cp rhcos-kernel /var/lib/tftpboot/rhcos/rhcos-kernel
 mv /etc/dnsmasq.conf  /etc/dnsmasq.conf.backup
 
 cat <<EOF > /etc/dnsmasq.conf
-interface=eth0:0
+interface=eth0
 bind-interfaces
 domain=$DOMAIN
 
 # DHCP range-leases
-dhcp-range= eth0:0,$SUBNET.$BIP,$SUBNET.225,255.255.255.0,1h
+dhcp-range= eth0,$SUBNET.$BIP,$SUBNET.225,255.255.255.0,1h
 
 # PXE
 dhcp-boot=pxelinux.0,$JUMP,$JUMPIP
@@ -455,8 +454,8 @@ default menu.c32
  label 1
  menu label ^1) Install Bootstrap Node
  menu default
- kernel rhcos/rhcos-kernel
- append ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
+ kernel http://$HIP:8080/ocp4/rhcos-kernel
+ append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/master
@@ -468,8 +467,8 @@ default menu.c32
  label 1
  menu label ^1) Install Master Node
  menu default
- kernel rhcos/rhcos-kernel 
- append ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
+ kernel http://$HIP:8080/ocp4/rhcos-kernel 
+ append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/worker
@@ -481,8 +480,8 @@ default menu.c32
  label 1
  menu label ^1) Install Worker Node
  menu default
- kernel rhcos/rhcos-kernel
- append ip=dhcp rd.neednet=1 initrd=rhcos/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
+ kernel http://$HIP:8080/ocp4/rhcos-kernel
+ append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
 EOF
 
 cp /var/lib/tftpboot/pxelinux.cfg/bootstrap /var/lib/tftpboot/pxelinux.cfg/$BOOTMAC
