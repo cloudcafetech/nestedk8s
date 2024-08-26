@@ -440,9 +440,28 @@ dhcp-host=$WOR1MAC,$WOR1,$WOR1IP
 dhcp-host=$WOR2MAC,$WOR2,$WOR2IP
 
 pxe-prompt="Press F8 for menu.", 10
-pxe-service=x86PC, "Install COREOS from network server $JUMPIP", pxelinux
+pxe-service=x86PC, "Install COREOS from network server", pxelinux
 enable-tftp
 tftp-root=/var/lib/tftpboot
+EOF
+
+cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/default
+UI vesamenu.c32
+MENU BACKGROUND        bg-ocp.png
+MENU COLOR sel         4  #ffffff std
+MENU COLOR title       1  #ffffff
+TIMEOUT 120
+PROMPT 0
+MENU TITLE OPENSHIFT 4.x INSTALL PXE MENU
+LABEL INSTALL BOOTSTRAP
+ kernel http://$JUMPIP:8080/ocp4/rhcos-kernel
+ append ip=dhcp rd.neednet=1 initrd=http://$JUMPIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$JUMPIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$JUMPIP:8080/ocp4/bootstrap.ign
+LABEL INSTALL MASTER
+ kernel http://$JUMPIP:8080/ocp4/rhcos-kernel
+ append ip=dhcp rd.neednet=1 initrd=http://$JUMPIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$JUMPIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$JUMPIP:8080/ocp4/master.ign
+LABEL INSTALL WORKER
+ kernel http://$JUMPIP:8080/ocp4/rhcos-kernel
+ append ip=dhcp rd.neednet=1 initrd=http://$JUMPIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$JUMPIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$JUMPIP:8080/ocp4/worker.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/bootstrap
