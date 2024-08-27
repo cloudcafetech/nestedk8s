@@ -285,6 +285,7 @@ EOF
 echo 'OPTIONS="-4"' >>/etc/sysconfig/named
 systemctl start named;systemctl enable --now named
 echo "PEERDNS=no" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+sed -i "1s/^/nameserver $HIP\n/" /etc/resolv.conf
 firewall-cmd --add-port=53/udp --permanent
 firewall-cmd --reload
 
