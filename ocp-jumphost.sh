@@ -284,6 +284,7 @@ EOF
 
 echo 'OPTIONS="-4"' >>/etc/sysconfig/named
 systemctl start named;systemctl enable --now named
+echo "PEERDNS=no" >> /etc/sysconfig/network-scripts/ifcfg-eth0
 firewall-cmd --add-port=53/udp --permanent
 firewall-cmd --reload
 
@@ -394,8 +395,10 @@ firewall-cmd --reload
 # Configure DNSMASQ, TFTP with PXE Server
 tftpsetup() {
 
+HNM=`hostname`
 echo "$bld$grn Configuring DNSMASQ, TFTP with PXE Server $nor"
-yum install net-tools nmstate dnsmasq syslinux tftp-server -y
+yum install net-tools nmstate dnsmasq syslinux tftp-server bind-utils -y
+echo "PEERDNS=no" >> /etc/sysconfig/network-scripts/ifcfg-eth0
 
 cp -r /usr/share/syslinux/* /var/lib/tftpboot
 mkdir /var/lib/tftpboot/rhcos
@@ -411,16 +414,16 @@ bind-interfaces
 domain=$DOMAIN
 
 # DHCP range-leases
-dhcp-range= eth0,$SUBNET.$BIP,$SUBNET.225,255.255.255.0,1h
+dhcp-range=eth0,$SUBNET.$BIP,$SUBNET.225,255.255.255.0,1h
 
 # PXE
-dhcp-boot=pxelinux.0,$JUMP,$JUMPIP
+dhcp-boot=pxelinux.0,$HNM,$HIP
 
 # Gateway
 dhcp-option=3,$GW
 
 # DNS
-dhcp-option=6,$GW, 8.8.8.8
+dhcp-option=6,$JUMPIP, $GW, 8.8.8.8
 server=8.8.4.4
 
 # Broadcast Address
@@ -439,7 +442,7 @@ dhcp-host=$INF2MAC,$INF2,$INF2IP
 dhcp-host=$WOR1MAC,$WOR1,$WOR1IP
 dhcp-host=$WOR2MAC,$WOR2,$WOR2IP
 
-pxe-prompt="Press F8 for menu.", 10
+pxe-prompt="Press F8 for menu.", 5
 pxe-service=x86PC, "Install COREOS from network server", pxelinux
 enable-tftp
 tftp-root=/var/lib/tftpboot
@@ -455,13 +458,13 @@ PROMPT 0
 MENU TITLE OPENSHIFT 4.x INSTALL PXE MENU
 LABEL INSTALL BOOTSTRAP
  kernel http://$JUMPIP:8080/ocp4/rhcos-kernel
- append ip=dhcp rd.neednet=1 initrd=http://$JUMPIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$JUMPIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$JUMPIP:8080/ocp4/bootstrap.ign
+ append ip=dhcp rd.neednet=1 initrd=http://$JUMPIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$JUMPIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$JUMPIP:8080/ocp4/bootstrap.ign
 LABEL INSTALL MASTER
  kernel http://$JUMPIP:8080/ocp4/rhcos-kernel
- append ip=dhcp rd.neednet=1 initrd=http://$JUMPIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$JUMPIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$JUMPIP:8080/ocp4/master.ign
+ append ip=dhcp rd.neednet=1 initrd=http://$JUMPIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$JUMPIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$JUMPIP:8080/ocp4/master.ign
 LABEL INSTALL WORKER
  kernel http://$JUMPIP:8080/ocp4/rhcos-kernel
- append ip=dhcp rd.neednet=1 initrd=http://$JUMPIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$JUMPIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$JUMPIP:8080/ocp4/worker.ign
+ append ip=dhcp rd.neednet=1 initrd=http://$JUMPIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$JUMPIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$JUMPIP:8080/ocp4/worker.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/bootstrap
@@ -474,7 +477,7 @@ default menu.c32
  menu label ^1) Install Bootstrap Node
  menu default
  kernel http://$HIP:8080/ocp4/rhcos-kernel
- append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
+ append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/master
@@ -487,7 +490,7 @@ default menu.c32
  menu label ^1) Install Master Node
  menu default
  kernel http://$HIP:8080/ocp4/rhcos-kernel 
- append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
+ append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/worker
@@ -500,7 +503,7 @@ default menu.c32
  menu label ^1) Install Worker Node
  menu default
  kernel http://$HIP:8080/ocp4/rhcos-kernel
- append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img console=tty0 console=ttyS0 coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
+ append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
 EOF
 
 cp /var/lib/tftpboot/pxelinux.cfg/bootstrap /var/lib/tftpboot/pxelinux.cfg/$BOOTMAC
