@@ -395,6 +395,7 @@ firewall-cmd --add-service=dhcp --permanent
 firewall-cmd --reload
 }
 
+
 # Configure DNSMASQ, TFTP with PXE Server
 tftpsetup() {
 
@@ -490,7 +491,7 @@ enable-tftp
 tftp-root=/var/lib/tftpboot
 EOF
 
-cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/default
+cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/no-default
 UI vesamenu.c32
 MENU BACKGROUND        bg-ocp.png
 MENU COLOR sel         4  #ffffff std
@@ -510,52 +511,45 @@ LABEL INSTALL WORKER
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/bootstrap
-default menu.c32
- prompt 1
- timeout 9
- ONTIMEOUT 1
- menu title ######## PXE Boot Menu ########
- label 1
- menu label ^1) Install Bootstrap Node
- menu default
- kernel http://$HIP:8080/ocp4/rhcos-kernel
- append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
+DEFAULT pxeboot
+TIMEOUT 5
+PROMPT 0
+LABEL pxeboot
+ KERNEL http://$HIP:8080/ocp4/rhcos-kernel
+ APPEND ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/bootstrap.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/master
-default menu.c32
- prompt 1
- timeout 9
- ONTIMEOUT 1
- menu title ######## PXE Boot Menu ########
- label 1
- menu label ^1) Install Master Node
- menu default
- kernel http://$HIP:8080/ocp4/rhcos-kernel 
- append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
+DEFAULT pxeboot
+TIMEOUT 5
+PROMPT 0
+LABEL pxeboot
+ KERNEL http://$HIP:8080/ocp4/rhcos-kernel
+ APPEND ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/master.ign
 EOF
 
 cat <<EOF > /var/lib/tftpboot/pxelinux.cfg/worker
-default menu.c32
- prompt 1
- timeout 9
- ONTIMEOUT 1
- menu title ######## PXE Boot Menu ########
- label 1
- menu label ^1) Install Worker Node
- menu default
- kernel http://$HIP:8080/ocp4/rhcos-kernel
- append ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
+DEFAULT pxeboot
+TIMEOUT 5
+PROMPT 0
+LABEL pxeboot
+ KERNEL http://$HIP:8080/ocp4/rhcos-kernel
+ APPEND ip=dhcp rd.neednet=1 initrd=http://$HIP:8080/ocp4/rhcos-initramfs.img coreos.inst.install_dev=sda coreos.live.rootfs_url=http://$HIP:8080/ocp4/rhcos-rootfs.img coreos.inst.ignition_url=http://$HIP:8080/ocp4/worker.ign
 EOF
 
-cp /var/lib/tftpboot/pxelinux.cfg/bootstrap /var/lib/tftpboot/pxelinux.cfg/$BOOTMAC
-cp /var/lib/tftpboot/pxelinux.cfg/master /var/lib/tftpboot/pxelinux.cfg/$MAS1MAC
-cp /var/lib/tftpboot/pxelinux.cfg/master /var/lib/tftpboot/pxelinux.cfg/$MAS2MAC
-cp /var/lib/tftpboot/pxelinux.cfg/master /var/lib/tftpboot/pxelinux.cfg/$MAS3MAC
-cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$INF1MAC
-cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$INF2MAC
-cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$WOR1MAC
-cp /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$WOR2MAC
+# Link the MAC
+ln -s /var/lib/tftpboot/pxelinux.cfg/bootstrap /var/lib/tftpboot/pxelinux.cfg/$(echo $BOOTMAC | awk '{print tolower($0)}' | sed 's/^/01-/g' | sed 's/:/-/g')
+ln -s /var/lib/tftpboot/pxelinux.cfg/master /var/lib/tftpboot/pxelinux.cfg/$(echo $MAS1MAC | awk '{print tolower($0)}' | sed 's/^/01-/g' | sed 's/:/-/g')
+ln -s /var/lib/tftpboot/pxelinux.cfg/master /var/lib/tftpboot/pxelinux.cfg/$(echo $MAS2MAC | awk '{print tolower($0)}' | sed 's/^/01-/g' | sed 's/:/-/g')
+ln -s /var/lib/tftpboot/pxelinux.cfg/master /var/lib/tftpboot/pxelinux.cfg/$(echo $MAS3MAC | awk '{print tolower($0)}' | sed 's/^/01-/g' | sed 's/:/-/g')
+ln -s /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$(echo $INF1MAC | awk '{print tolower($0)}' | sed 's/^/01-/g' | sed 's/:/-/g')
+ln -s /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$(echo $INF2MAC | awk '{print tolower($0)}' | sed 's/^/01-/g' | sed 's/:/-/g')
+ln -s /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$(echo $WOR1MAC | awk '{print tolower($0)}' | sed 's/^/01-/g' | sed 's/:/-/g')
+ln -s /var/lib/tftpboot/pxelinux.cfg/worker /var/lib/tftpboot/pxelinux.cfg/$(echo $WOR2MAC | awk '{print tolower($0)}' | sed 's/^/01-/g' | sed 's/:/-/g')
+
+# If Menu Driven in Screen Uncomment below two lines
+#mv /var/lib/tftpboot/pxelinux.cfg/no-default /var/lib/tftpboot/pxelinux.cfg/default
+#rm -rf /var/lib/tftpboot/pxelinux.cfg/01-*
 
 systemctl start dnsmasq;systemctl enable --now dnsmasq
 systemctl start tftp;systemctl enable --now tftp
