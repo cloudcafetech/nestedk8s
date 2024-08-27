@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Openshift Jumphost (DNS,LB,NFS,DHCP,WEB) host setup script
+# Openshift Jumphost (DNS,TFTP,LB,NFS,DHCP,WEB) host setup script
+# DO NOT RUN TFTP, DNS & DHCP in same Host, Use either TFTP (dnsmasq+dhcp+tftp+pxe) or DNS & DHCP
 # Ref: (https://www.linuxtechi.com/install-openshift-baremetal-upi/)
 
 DOMAIN=cloudcafe.tech
@@ -116,6 +117,7 @@ curl -s -o rhcos-rootfs.img https://mirror.openshift.com/pub/openshift-v4/depend
 dnssetup() {
 
 echo "$bld$grn Configuring DNS Server $nor"
+if [[ -n $(netstat -tunpl | grep 53) ]]; then echo "$bld$red DNS Port (53) used, DO NOT RUN dnssetup $nor"; exit; fi
 yum install bind bind-utils -y
 
 cat <<EOF > /etc/named.conf
@@ -398,7 +400,10 @@ tftpsetup() {
 
 HNM=`hostname`
 echo "$bld$grn Configuring DNSMASQ, TFTP with PXE Server $nor"
+if [[ -n $(netstat -tunpl | grep 53) ]]; then echo "$bld$red DNS Port (53) used, DO NOT RUN tftpsetup $nor"; exit; fi
+
 yum install net-tools nmstate dnsmasq syslinux tftp-server bind-utils -y
+ifconfig eth0:0 $SUBNET.$JIP2 netmask 255.255.255.0
 echo "PEERDNS=no" >> /etc/sysconfig/network-scripts/ifcfg-eth0
 
 cp -r /usr/share/syslinux/* /var/lib/tftpboot
@@ -433,16 +438,52 @@ dhcp-option=28,$SUBNET.255
 # NTP Server
 dhcp-option=42,0.0.0.0
 
-# Static IPs
-dhcp-host=$BOOTMAC,$BOOT,$BOOTIP
-dhcp-host=$MAS1MAC,$MAS1,$MAS1IP
-dhcp-host=$MAS2MAC,$MAS2,$MAS2IP
-dhcp-host=$MAS3MAC,$MAS3,$MAS3IP
-dhcp-host=$INF1MAC,$INF1,$INF1IP
-dhcp-host=$INF2MAC,$INF2,$INF2IP
-dhcp-host=$WOR1MAC,$WOR1,$WOR1IP
-dhcp-host=$WOR2MAC,$WOR2,$WOR2IP
+###### OpenShift #######
 
+# Hosts MAC & Static IP
+dhcp-host=$BOOTMAC,$BOOT,$BOOTIP,86400
+dhcp-host=$MAS1MAC,$MAS1,$MAS1IP,86400
+dhcp-host=$MAS2MAC,$MAS2,$MAS2IP,86400
+dhcp-host=$MAS3MAC,$MAS3,$MAS3IP,86400
+dhcp-host=$INF1MAC,$INF1,$INF1IP,86400
+dhcp-host=$INF2MAC,$INF2,$INF2IP,86400
+dhcp-host=$WOR1MAC,$WOR1,$WOR1IP,86400
+dhcp-host=$WOR2MAC,$WOR2,$WOR2IP,86400
+
+# DNS Records
+address=/api.$CTX.$DOMAIN/$JUMPIP
+address=/api-int.$CTX.$DOMAIN/$JUMPIP
+address=/apps.$CTX.$DOMAIN/$JUMPIP2
+
+address=/$JUMP,$JUMPIP
+address=/$BOOT,$BOOTIP
+address=/$MAS1,$MAS1IP
+address=/$MAS2,$MAS2IP
+address=/$MAS3,$MAS3IP
+address=/$INF1,$INF1IP
+address=/$INF2,$INF2IP
+address=/$WOR1,$WOR1IP
+address=/$WOR2,$WOR2IP
+address=/etcd-0.$CTX.$DOMAIN/$MAS1IP
+address=/etcd-1.$CTX.$DOMAIN/$MAS2IP
+address=/etcd-2.$CTX.$DOMAIN/$MAS3IP
+
+# PTR Records
+ptr-record=$JIP.$REV.,"$JUMP"
+ptr-record=$JIP2.$REV.,"$JUMP"
+ptr-record=$BIP.$REV.,"$BOOT"
+ptr-record=$M1IP.$REV.,"$MAS1IP"
+ptr-record=$M2IP.$REV.,"$MAS2IP"
+ptr-record=$M3IP.$REV.,"$MAS3IP"
+ptr-record=$I1IP.$REV.,"$INF1IP"
+ptr-record=$I2IP.$REV.,"$INF2IP"
+ptr-record=$W1IP.$REV.,"$WOR1IP"
+ptr-record=$W2IP.$REV.,"$WOR2IP"
+ptr-record=$JIP.$REV.,"api-int.$CTX.$DOMAIN"
+ptr-record=$JIP.$REV.,"api.$CTX.$DOMAIN"
+###### OpenShift #######
+
+# TFTP
 pxe-prompt="Press F8 for menu.", 5
 pxe-service=x86PC, "Install COREOS from network server", pxelinux
 enable-tftp
@@ -538,7 +579,6 @@ firewall-cmd --reload
 # Configure HAProxy
 lbsetup() {
 
-
 echo "$bld$grn Configuring HAProxy Server $nor"
 yum install net-tools nmstate haproxy -y
 
@@ -550,6 +590,7 @@ BOOTPROTO=static
 IPADDR=$SUBNET.$JIP2
 NETMASK=255.255.255.0
 ONBOOT=yes
+PEERDNS=no
 EOF
 
 cat <<EOF > /etc/haproxy/haproxy.cfg
@@ -766,8 +807,8 @@ curl localhost:8080/ocp4/
 setupall () {
 
 toolsetup
-dnssetup
-dhcpsetup
+#dnssetup
+#dhcpsetup
 tftpsetup
 websetup
 lbsetup
@@ -807,6 +848,8 @@ case "$1" in
             clear
             echo
             echo "$bld$blu Openshift Jumphost (DNS,LB,NFS,DHCP,TFTP,WEB) host setup script $nor"
+            echo "$bld$red DO NOT RUN TFTP, DNS & DHCP in same Host. $nor"
+            echo "$bld$yel Use either tftpsetup (dnsmasq+dhcp+tftp+pxe) or dnssetup & dhcpsetup $nor"
             echo
             echo "$bld$grn Usage: $0 { toolsetup | dnssetup | dhcpsetup | tftpsetup | websetup | lbsetup | nfssetup | manifes | setupall } $nor"
             echo
