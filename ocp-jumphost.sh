@@ -479,16 +479,16 @@ address=/etcd-1.$CTX.$DOMAIN/$MAS2IP
 address=/etcd-2.$CTX.$DOMAIN/$MAS3IP
 
 # PTR Records
-ptr-record=$JIP.$REV.,"$JUMP"
-ptr-record=$JIP2.$REV.,"$JUMP"
-ptr-record=$BIP.$REV.,"$BOOT"
-ptr-record=$M1IP.$REV.,"$MAS1IP"
-ptr-record=$M2IP.$REV.,"$MAS2IP"
-ptr-record=$M3IP.$REV.,"$MAS3IP"
-ptr-record=$I1IP.$REV.,"$INF1IP"
-ptr-record=$I2IP.$REV.,"$INF2IP"
-ptr-record=$W1IP.$REV.,"$WOR1IP"
-ptr-record=$W2IP.$REV.,"$WOR2IP"
+ptr-record=$JIP.$REV.,"$JUMP.$CTX.$DOMAIN"
+ptr-record=$JIP2.$REV.,"$JUMP.$CTX.$DOMAIN"
+ptr-record=$BIP.$REV.,"$BOOT.$CTX.$DOMAIN"
+ptr-record=$M1IP.$REV.,"$MAS1.$CTX.$DOMAIN"
+ptr-record=$M2IP.$REV.,"$MAS2.$CTX.$DOMAIN"
+ptr-record=$M3IP.$REV.,"$MAS3.$CTX.$DOMAIN"
+ptr-record=$I1IP.$REV.,"$INF1.$CTX.$DOMAIN"
+ptr-record=$I2IP.$REV.,"$INF2.$CTX.$DOMAIN"
+ptr-record=$W1IP.$REV.,"$WOR1.$CTX.$DOMAIN"
+ptr-record=$W2IP.$REV.,"$WOR2.$CTX.$DOMAIN"
 ptr-record=$JIP.$REV.,"api-int.$CTX.$DOMAIN"
 ptr-record=$JIP.$REV.,"api.$CTX.$DOMAIN"
 ###### OpenShift #######
