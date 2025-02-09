@@ -266,6 +266,8 @@ mkdir -p /etc/rancher/rke2
 cat << EOF >  /etc/rancher/rke2/config.yaml
 token: pkls-secret
 write-kubeconfig-mode: "0644"
+cluster-cidr: "10.42.0.0/16"
+service-cidr: "172.28.0.0/16"
 node-label:
 - "region=master"
 tls-san:
@@ -275,7 +277,7 @@ tls-san:
 disable: rke2-ingress-nginx
 EOF
 
-curl -sfL https://get.rke2.io | INSTALL_RKE2_CHANNEL=v1.20 sh -
+curl -sfL https://get.rke2.io | INSTALL_RKE2_CHANNEL=v1.30 sh -
 systemctl enable rke2-server;systemctl start rke2-server;systemctl status rke2-server
 mkdir ~/.kube
 ln -s /etc/rancher/rke2/rke2.yaml ~/.kube/config
