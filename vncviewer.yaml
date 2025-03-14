@@ -74,16 +74,10 @@ spec:
         app: virtvnc
     spec:
       serviceAccountName: virtvnc
-      nodeSelector:
-        node-role.kubernetes.io/master: ''
-      tolerations: 
-      - key: "node-role.kubernetes.io/master"
-        operator: "Equal"
-        value: ""
-        effect: "NoSchedule"
       containers:
       - name: virtvnc
-        image: quay.io/samblade/virtvnc:v0.1
+        #image: quay.io/samblade/virtvnc:v0.1
+        image: prasenforu/virtvnc:v1
         livenessProbe:
           httpGet:
             port: 8001
